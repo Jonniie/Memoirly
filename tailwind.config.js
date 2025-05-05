@@ -101,6 +101,9 @@ export default {
           "100%": { transform: "translateY(0)", opacity: "1" },
         },
       },
+      fontSize: {
+        clamp: "clamp(1.75rem, 5vw, 3rem)",
+      },
     },
   },
   plugins: [],

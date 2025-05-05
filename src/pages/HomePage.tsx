@@ -32,8 +32,8 @@ export default function HomePage() {
       <div className="text-center container">
         {/* Logo & Tagline */}
         <div className="mb-16">
-          <h1 className="text-6xl mb-8 font-extrabold text-gray-800 tracking-tight">
-            Memoirly
+          <h1 className="text-clamp mb-8 font-extrabold text-gray-800 tracking-tight">
+            📸 Memoirly
           </h1>
           <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
             A smart, personal memory gallery that lets you preserve life’s most
