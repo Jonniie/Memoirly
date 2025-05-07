@@ -10,23 +10,6 @@ const cld = new Cloudinary({
   },
 });
 
-// export interface UploadParams {
-//   file: File;
-//   onProgress?: (progress: number) => void;
-//   folder?: string;
-//   tags?: string[];
-// }
-
-// export interface UploadResponse {
-//   publicId: string;
-//   url: string;
-//   secureUrl: string;
-//   format: string;
-//   width: number;
-//   height: number;
-//   resourceType: string;
-// }
-
 /**
  * Upload a file to Cloudinary
  */
@@ -118,5 +101,3 @@ export const getOptimizedUrl = (publicId, options) => {
 
   return image.toURL();
 };
-
-export default cld;

@@ -112,3 +112,7 @@ h1 {
 .card:hover {
   transform: translateY(-5px);
 }
+
+body {
+  background: linear-gradient(to bottom right, #fefce8, #fce7f3);
+}

@@ -1,5 +1,5 @@
-import { motion } from 'framer-motion';
-import { Camera, Sun } from 'lucide-react';
+import { motion } from "framer-motion";
+import { Camera, Sun } from "lucide-react";
 
 export default function LoadingScreen() {
   return (
@@ -11,7 +11,7 @@ export default function LoadingScreen() {
         className="flex flex-col items-center"
       >
         <div className="relative mb-6">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
@@ -21,23 +21,28 @@ export default function LoadingScreen() {
           </motion.div>
           <Camera size={64} className="text-primary-600" />
         </div>
-        
-        <motion.h1 
+
+        <motion.h1
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3, duration: 0.5 }}
           className="text-2xl font-semibold text-primary-800 mb-4"
         >
-          Summer Memories
+          Memoirly
         </motion.h1>
-        
+
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: 150 }}
-          transition={{ delay: 0.5, duration: 1, repeat: Infinity, repeatType: "reverse" }}
+          transition={{
+            delay: 0.5,
+            duration: 1,
+            repeat: Infinity,
+            repeatType: "reverse",
+          }}
           className="h-1 bg-gradient-to-r from-primary-400 via-secondary-400 to-accent-400 rounded-full"
         />
-        
+
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

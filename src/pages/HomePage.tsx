@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import { motion } from "framer-motion";
-import { Camera, Calendar, Film } from "lucide-react";
+import { Camera, Calendar, Film, Sun } from "lucide-react";
 
 import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
@@ -28,13 +28,25 @@ export default function HomePage() {
   ];
   const { isSignedIn } = useAuth();
   return (
-    <div className="h-screen w-full bg-gradient-to-br from-yellow-50 to-pink-100 flex items-center gap-16 justify-center px-6">
+    <div className="h-screen w-full  flex items-center gap-16 justify-center px-6">
       <div className="text-center container">
         {/* Logo & Tagline */}
-        <div className="mb-16">
-          <h1 className="text-clamp mb-8 font-extrabold text-gray-800 tracking-tight">
-            📸 Memoirly
-          </h1>
+        <div className="">
+          <div className="mb-4 sm-mb-16 flex items-center justify-center text-clamp font-extrabold text-gray-800 tracking-tight">
+            <div className="relative">
+              <Camera size={48} className="text-primary-600" />
+              <motion.div
+                initial={{ opacity: 0, scale: 0 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="absolute -top-2 -right-2"
+              >
+                <Sun size={14} className="text-accent-500" />
+              </motion.div>
+            </div>
+            <h1 className="ml-2  font-semibold text-gray-900">Memoirly</h1>
+          </div>
+
           <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
             A smart, personal memory gallery that lets you preserve life’s most
             meaningful moments — with photos, videos, journals, and AI-generated
@@ -43,8 +55,8 @@ export default function HomePage() {
         </div>
         {/* Features Section */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 ">
-          <div className="mt-16">
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-1 lg:grid-cols-3">
+          <div className="mt-8 sm:mt-12">
+            <div className="grid grid-cols-1 gap-4 sm:gap-8 sm:grid-cols-1 lg:grid-cols-3">
               {features.map((feature, index) => (
                 <motion.div
                   key={feature.title}
@@ -53,7 +65,7 @@ export default function HomePage() {
                   transition={{ duration: 0.5, delay: index * 0.1 + 0.5 }}
                   className="rounded-lg shadow-sm border border-gray-100 p-6 hover:shadow-lg transition-shadow cursor-pointer bg-white/20 backdrop-blur-sm"
                 >
-                  <div className="p-4 bg-primary-100 rounded-full inline-block mb-4 ">
+                  <div className="p-4 bg-primary-100 rounded-full inline-block mb-4">
                     {feature.icon}
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900">
