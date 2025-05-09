@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import {
@@ -8,115 +8,149 @@ import {
   LayoutList,
   Image as ImageIcon,
   X,
+  Loader2,
 } from "lucide-react";
 
 import MediaUploader from "../components/upload/MediaUploader";
 import GalleryGrid from "../components/gallery/GalleryGrid";
 import { cn } from "../lib/utils";
+import { getUserMedia } from "../lib/supabaseHelpers";
 
 // Mock data for now
-const mockMemories = [
-  {
-    id: "1",
-    publicId: "sample1",
-    url: "https://images.pexels.com/photos/1000366/pexels-photo-1000366.jpeg",
-    thumbnailUrl:
-      "https://images.pexels.com/photos/1000366/pexels-photo-1000366.jpeg?auto=compress&cs=tinysrgb&w=600",
-    type: "image",
-    title: "Beach Day",
-    createdAt: new Date("2025-06-15").toISOString(),
-    tags: ["beach", "summer", "friends"],
-    emotion: "joyful",
-  },
-  {
-    id: "2",
-    publicId: "sample2",
-    url: "https://images.pexels.com/photos/1671325/pexels-photo-1671325.jpeg",
-    thumbnailUrl:
-      "https://images.pexels.com/photos/1671325/pexels-photo-1671325.jpeg?auto=compress&cs=tinysrgb&w=600",
-    type: "image",
-    title: "Mountain Hike",
-    createdAt: new Date("2025-07-05").toISOString(),
-    tags: ["hiking", "mountains", "nature"],
-    emotion: "peaceful",
-  },
-  {
-    id: "3",
-    publicId: "sample3",
-    url: "https://images.pexels.com/photos/1040473/pexels-photo-1040473.jpeg",
-    thumbnailUrl:
-      "https://images.pexels.com/photos/1040473/pexels-photo-1040473.jpeg?auto=compress&cs=tinysrgb&w=600",
-    type: "image",
-    title: "BBQ with Friends",
-    createdAt: new Date("2025-07-10").toISOString(),
-    tags: ["food", "friends", "bbq"],
-    emotion: "happy",
-  },
-  {
-    id: "4",
-    publicId: "sample4",
-    url: "https://images.pexels.com/photos/315938/pexels-photo-315938.jpeg",
-    thumbnailUrl:
-      "https://images.pexels.com/photos/315938/pexels-photo-315938.jpeg?auto=compress&cs=tinysrgb&w=600",
-    type: "image",
-    title: "Sunset at the Lake",
-    createdAt: new Date("2025-07-15").toISOString(),
-    tags: ["sunset", "lake", "nature"],
-    emotion: "peaceful",
-  },
-  {
-    id: "5",
-    publicId: "sample5",
-    url: "https://images.pexels.com/photos/1164985/pexels-photo-1164985.jpeg",
-    thumbnailUrl:
-      "https://images.pexels.com/photos/1164985/pexels-photo-1164985.jpeg?auto=compress&cs=tinysrgb&w=600",
-    type: "image",
-    title: "City Lights",
-    createdAt: new Date("2025-07-20").toISOString(),
-    tags: ["city", "night", "lights"],
-    emotion: "excited",
-  },
-  {
-    id: "6",
-    publicId: "sample6",
-    url: "https://images.pexels.com/photos/69817/pexels-photo-69817.jpeg",
-    thumbnailUrl:
-      "https://images.pexels.com/photos/69817/pexels-photo-69817.jpeg?auto=compress&cs=tinysrgb&w=600",
-    type: "image",
-    title: "Dog at the Park",
-    createdAt: new Date("2025-07-25").toISOString(),
-    tags: ["dog", "pet", "park"],
-    emotion: "happy",
-  },
-];
+// const mockMemories = [
+//   {
+//     id: "1",
+//     publicId: "sample1",
+//     url: "https://images.pexels.com/photos/1000366/pexels-photo-1000366.jpeg",
+//     thumbnailUrl:
+//       "https://images.pexels.com/photos/1000366/pexels-photo-1000366.jpeg?auto=compress&cs=tinysrgb&w=600",
+//     type: "image",
+//     title: "Beach Day",
+//     createdAt: new Date("2025-06-15").toISOString(),
+//     tags: ["beach", "summer", "friends"],
+//     emotion: "joyful",
+//   },
+//   {
+//     id: "2",
+//     publicId: "sample2",
+//     url: "https://images.pexels.com/photos/1671325/pexels-photo-1671325.jpeg",
+//     thumbnailUrl:
+//       "https://images.pexels.com/photos/1671325/pexels-photo-1671325.jpeg?auto=compress&cs=tinysrgb&w=600",
+//     type: "image",
+//     title: "Mountain Hike",
+//     createdAt: new Date("2025-07-05").toISOString(),
+//     tags: ["hiking", "mountains", "nature"],
+//     emotion: "peaceful",
+//   },
+//   {
+//     id: "3",
+//     publicId: "sample3",
+//     url: "https://images.pexels.com/photos/1040473/pexels-photo-1040473.jpeg",
+//     thumbnailUrl:
+//       "https://images.pexels.com/photos/1040473/pexels-photo-1040473.jpeg?auto=compress&cs=tinysrgb&w=600",
+//     type: "image",
+//     title: "BBQ with Friends",
+//     createdAt: new Date("2025-07-10").toISOString(),
+//     tags: ["food", "friends", "bbq"],
+//     emotion: "happy",
+//   },
+//   {
+//     id: "4",
+//     publicId: "sample4",
+//     url: "https://images.pexels.com/photos/315938/pexels-photo-315938.jpeg",
+//     thumbnailUrl:
+//       "https://images.pexels.com/photos/315938/pexels-photo-315938.jpeg?auto=compress&cs=tinysrgb&w=600",
+//     type: "image",
+//     title: "Sunset at the Lake",
+//     createdAt: new Date("2025-07-15").toISOString(),
+//     tags: ["sunset", "lake", "nature"],
+//     emotion: "peaceful",
+//   },
+//   {
+//     id: "5",
+//     publicId: "sample5",
+//     url: "https://images.pexels.com/photos/1164985/pexels-photo-1164985.jpeg",
+//     thumbnailUrl:
+//       "https://images.pexels.com/photos/1164985/pexels-photo-1164985.jpeg?auto=compress&cs=tinysrgb&w=600",
+//     type: "image",
+//     title: "City Lights",
+//     createdAt: new Date("2025-07-20").toISOString(),
+//     tags: ["city", "night", "lights"],
+//     emotion: "excited",
+//   },
+//   {
+//     id: "6",
+//     publicId: "sample6",
+//     url: "https://images.pexels.com/photos/69817/pexels-photo-69817.jpeg",
+//     thumbnailUrl:
+//       "https://images.pexels.com/photos/69817/pexels-photo-69817.jpeg?auto=compress&cs=tinysrgb&w=600",
+//     type: "image",
+//     title: "Dog at the Park",
+//     createdAt: new Date("2025-07-25").toISOString(),
+//     tags: ["dog", "pet", "park"],
+//     emotion: "happy",
+//   },
+// ];
 
 export default function Dashboard() {
   const { user } = useUser();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [memories, setMemories] = useState(mockMemories);
+  const [memories, setMemories] = useState([]);
   const [viewMode, setViewMode] = useState("grid");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchMemories = async () => {
+      if (!user) return;
+
+      try {
+        setIsLoading(true);
+        const mediaData = await getUserMedia(user.id);
+
+        // Transform the data to match our expected format
+        const transformedMemories = mediaData.map((media) => ({
+          id: media.id,
+          publicId: media.public_id,
+          url: media.url,
+          thumbnailUrl: media.url, // You might want to generate a thumbnail URL
+          type: media.type,
+          title: media.caption || media.url.split("/").pop(),
+          createdAt: media.created_at,
+          tags: media.tags || [],
+          emotion: media.emotion || "neutral",
+        }));
+
+        setMemories(transformedMemories);
+      } catch (err) {
+        console.error("Error fetching memories:", err);
+        setError("Failed to load memories. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMemories();
+  }, [user]);
 
   const handleUploadComplete = (newMedia) => {
-    // In a real app, we would save these to a database
-    console.log("Uploaded media:", newMedia);
-
-    // For now, just close the modal
-    setIsUploadModalOpen(false);
-
     // Add the new media to our memories
     const newMemories = newMedia.map((media) => ({
       id: media.id,
       publicId: media.publicId,
       url: media.url,
-      thumbnailUrl: media.thumbnailUrl,
+      thumbnailUrl: media.thumbnailUrl || media.url, // Use thumbnailUrl if available, fallback to url
       type: media.type,
-      title: media.originalFilename,
-      createdAt: new Date().toISOString(),
-      tags: [],
-      emotion: "happy",
+      title: media.caption || media.originalFilename,
+      note: media.note || "",
+      createdAt: media.created_at || new Date().toISOString(),
+      tags: media.tags || [],
+      emotion: media.emotion || "neutral",
+      favourite: media.favourite || false,
     }));
 
     setMemories((prev) => [...newMemories, ...prev]);
+    setIsUploadModalOpen(false);
   };
 
   return (
@@ -130,15 +164,17 @@ export default function Dashboard() {
           <p className="text-gray-600">Your personal memory gallery</p>
         </div>
 
-        <div className="mt-4 sm:mt-0">
-          <button
-            onClick={() => setIsUploadModalOpen(true)}
-            className="btn-primary flex items-center"
-          >
-            <Plus size={18} className="mr-1" />
-            Add Memories
-          </button>
-        </div>
+        {memories.length > 0 && (
+          <div className="mt-4 sm:mt-0">
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="btn-primary flex items-center"
+            >
+              <Plus size={18} className="mr-1" />
+              Add Memories
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filters and view toggle */}
@@ -177,13 +213,28 @@ export default function Dashboard() {
       </div>
 
       {/* Gallery Section */}
-      {memories.length > 0 ? (
+      {isLoading ? (
+        <div className="text-center py-16">
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary-600" />
+          <p className="mt-2 text-gray-600">Loading your memories...</p>
+        </div>
+      ) : error ? (
+        <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
+          <p className="text-error-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="btn-primary"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : memories.length > 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <GalleryGrid memories={memories} />
+          <GalleryGrid memories={memories} viewMode={viewMode} />
         </motion.div>
       ) : (
         <motion.div

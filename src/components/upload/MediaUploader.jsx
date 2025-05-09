@@ -1,7 +1,15 @@
 import { useState, useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion } from "framer-motion";
-import { Camera, UploadCloud, X, FileImage, FileVideo } from "lucide-react";
+import {
+  Camera,
+  UploadCloud,
+  X,
+  FileImage,
+  FileVideo,
+  Tag,
+  AlignLeft,
+} from "lucide-react";
 import { useUser } from "@clerk/clerk-react";
 import { uploadMedia, saveMediaToSupabase } from "../../lib/supabaseHelpers";
 import { cn, formatFileSize, isImageFile, isVideoFile } from "../../lib/utils";
@@ -18,6 +26,9 @@ export default function MediaUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [error, setError] = useState(null);
+  const [tags, setTags] = useState([]);
+  const [tagInput, setTagInput] = useState("");
+  const [note, setNote] = useState("");
 
   const uploads = [];
 
@@ -71,6 +82,26 @@ export default function MediaUploader({
     setFiles(files.filter((_, i) => i !== index));
   };
 
+  const handleAddTag = (e) => {
+    e.preventDefault();
+    if (!tagInput.trim()) return;
+
+    // Split by comma and process each tag
+    const newTags = tagInput
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter((tag) => tag.length > 0 && !tags.includes(tag));
+
+    if (newTags.length > 0) {
+      setTags([...tags, ...newTags]);
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
   const handleUpload = async () => {
     if (files.length === 0) return;
 
@@ -78,6 +109,7 @@ export default function MediaUploader({
     setError(null);
 
     const uploadedMedia = [];
+    const duplicateFiles = [];
 
     try {
       // Upload files sequentially to show progress for each
@@ -94,20 +126,26 @@ export default function MediaUploader({
           onProgress: (progress) => {
             setUploadProgress((prev) => ({ ...prev, [fileId]: progress }));
           },
-          tags: ["memories"],
+          tags: ["memories", ...tags],
         });
 
         // Save to Supabase
-        console.log("User ID from Clerk:", user.id); // Debug log
         const mediaData = await saveMediaToSupabase({
           url: result.secureUrl,
           type: result.resourceType === "image" ? "image" : "video",
           caption: file.name,
+          note: note.trim(),
           user_id: user.id,
           album_id: albumId,
+          tags: tags,
         });
 
         console.log("mediaData", mediaData);
+
+        if (mediaData.isDuplicate) {
+          duplicateFiles.push(file.name);
+          continue; // Skip adding to uploadedMedia array
+        }
 
         // Add to uploaded media array
         uploadedMedia.push({
@@ -120,18 +158,33 @@ export default function MediaUploader({
           height: result.height,
           originalFilename: file.name,
           caption: mediaData.caption,
+          note: mediaData.note,
           emotion: mediaData.emotion,
           created_at: mediaData.created_at,
           favourite: mediaData.favourite,
+          tags: mediaData.tags,
         });
       }
 
-      // Notify parent component of successful upload
-      onUploadComplete(uploadedMedia);
+      // Show warning if there were duplicate files
+      if (duplicateFiles.length > 0) {
+        setError(
+          `Some files were skipped because they already exist: ${duplicateFiles.join(
+            ", "
+          )}`
+        );
+      }
+
+      // Only notify parent if we have new media
+      if (uploadedMedia.length > 0) {
+        onUploadComplete(uploadedMedia);
+      }
 
       // Reset state
       setFiles([]);
       setUploadProgress({});
+      setTags([]);
+      setNote("");
     } catch (err) {
       setError("Upload failed. Please try again.");
       console.error("Upload error:", err);
@@ -197,6 +250,69 @@ export default function MediaUploader({
           <h3 className="font-medium text-gray-700">
             Selected Files ({files.length})
           </h3>
+
+          {/* Note Input */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Note
+            </label>
+            <div className="flex gap-2">
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="Add a note for your memories..."
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 min-h-[100px] resize-y"
+                disabled={isUploading}
+              />
+            </div>
+          </div>
+
+          {/* Tags Input */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+              Tags
+            </label>
+            <form onSubmit={handleAddTag} className="flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                placeholder="Add tags (separated by commas)..."
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                disabled={isUploading}
+              />
+              <button
+                type="submit"
+                className="btn-secondary flex items-center gap-2"
+                disabled={isUploading}
+              >
+                <Tag size={16} />
+                Add
+              </button>
+            </form>
+
+            {/* Tags Display */}
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-primary-100 text-primary-700"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(tag)}
+                      className="hover:text-primary-900"
+                      disabled={isUploading}
+                    >
+                      <X size={14} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
 
           <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {files.map((file, index) => {

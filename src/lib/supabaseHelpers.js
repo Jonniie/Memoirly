@@ -85,7 +85,7 @@ export const saveMediaToSupabase = async (mediaData) => {
   // First check if the media already exists
   const { data: existingMedia, error: checkError } = await supabase
     .from("media")
-    .select("id")
+    .select("*")
     .eq("url", mediaData.url)
     .eq("user_id", mediaData.user_id)
     .single();
@@ -96,10 +96,10 @@ export const saveMediaToSupabase = async (mediaData) => {
     throw checkError;
   }
 
-  // If media already exists, return it instead of creating a new entry
+  // If media already exists, return it with a duplicate flag
   if (existingMedia) {
     console.log("Media already exists, returning existing record");
-    return existingMedia;
+    return { ...existingMedia, isDuplicate: true };
   }
 
   // If media doesn't exist, create new entry
@@ -110,9 +110,11 @@ export const saveMediaToSupabase = async (mediaData) => {
         url: mediaData.url,
         type: mediaData.type,
         caption: mediaData.caption || null,
+        note: mediaData.note || null,
         emotion: mediaData.emotion || null,
         album_id: mediaData.album_id || null,
         user_id: mediaData.user_id,
+        tags: mediaData.tags || [],
         favourite: false,
         created_at: new Date().toISOString(),
       },
@@ -125,7 +127,7 @@ export const saveMediaToSupabase = async (mediaData) => {
     throw error;
   }
 
-  return data;
+  return { ...data, isDuplicate: false };
 };
 
 /**

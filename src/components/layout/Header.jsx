@@ -31,10 +31,10 @@ export default function Header() {
   return (
     <header
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+        "fixed top-0 left-0 right-0 z-50 transition-all duration-300 py-8",
         isScrolled
-          ? "bg-white/50 backdrop-blur-md shadow-sm border-b border-gray-200/50 py-4"
-          : "bg-transparent py-4"
+          ? "bg-white/50 backdrop-blur-md shadow-sm border-b border-gray-200/50"
+          : "bg-transparent"
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,9 +80,7 @@ export default function Header() {
             {isLoaded && user ? (
               <UserButton afterSignOutUrl="/" />
             ) : (
-              <Link to="/" className="btn-primary">
-                Sign In
-              </Link>
+              <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
             )}
 
             {/* Mobile menu button */}

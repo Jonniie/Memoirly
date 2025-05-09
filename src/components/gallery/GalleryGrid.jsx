@@ -1,15 +1,82 @@
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import Masonry from "react-masonry-css";
-import { Calendar, MapPin, Tag } from "lucide-react";
+import { Calendar, MapPin, Tag, Heart, Loader2 } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "../../lib/utils";
+import { supabase } from "../../lib/supabase";
 
-export default function GalleryGrid({ memories }) {
+export default function GalleryGrid({ memories, viewMode }) {
+  const navigate = useNavigate();
+  const [favoritingId, setFavoritingId] = useState(null);
+  const [favorites, setFavorites] = useState({});
+
+  // Fetch favorite status for all memories
+  useEffect(() => {
+    const fetchFavorites = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("media")
+          .select("id, favourite")
+          .in(
+            "id",
+            memories.map((memory) => memory.id)
+          );
+
+        if (error) throw error;
+
+        // Create a map of id -> favorite status
+        const favoritesMap = data.reduce((acc, item) => {
+          acc[item.id] = item.favourite;
+          return acc;
+        }, {});
+
+        setFavorites(favoritesMap);
+      } catch (err) {
+        console.error("Error fetching favorites:", err);
+      }
+    };
+
+    if (memories.length > 0) {
+      fetchFavorites();
+    }
+  }, [memories]);
+
   const breakpointColumns = {
     default: 4,
     1280: 3,
     1024: 2,
     640: 1,
+  };
+
+  const handleMemoryClick = (memoryId) => {
+    navigate(`/memory/${memoryId}`);
+  };
+
+  const handleToggleFavorite = async (e, memory) => {
+    e.stopPropagation(); // Prevent navigation when clicking the heart
+    try {
+      setFavoritingId(memory.id);
+      const newFavoriteState = !favorites[memory.id];
+
+      const { error } = await supabase
+        .from("media")
+        .update({ favourite: newFavoriteState })
+        .eq("id", memory.id);
+
+      if (error) throw error;
+
+      // Update local favorites state
+      setFavorites((prev) => ({
+        ...prev,
+        [memory.id]: newFavoriteState,
+      }));
+    } catch (err) {
+      console.error("Error updating favorite status:", err);
+    } finally {
+      setFavoritingId(null);
+    }
   };
 
   return (
@@ -26,9 +93,9 @@ export default function GalleryGrid({ memories }) {
           transition={{ duration: 0.3 }}
           className="mb-4"
         >
-          <Link
-            to={`/memory/${memory.id}`}
-            className="block group relative overflow-hidden rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow"
+          <div
+            onClick={() => handleMemoryClick(memory.id)}
+            className="block group relative overflow-hidden rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer"
           >
             {/* Memory Image/Video */}
             <div className="aspect-w-4 aspect-h-3 bg-gray-100">
@@ -45,6 +112,27 @@ export default function GalleryGrid({ memories }) {
                 />
               )}
             </div>
+
+            {/* Favorite Button */}
+            <button
+              onClick={(e) => handleToggleFavorite(e, memory)}
+              disabled={favoritingId === memory.id}
+              className={cn(
+                "absolute top-2 right-2 p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors",
+                favorites[memory.id]
+                  ? "text-primary-600"
+                  : "text-gray-600 hover:text-primary-600"
+              )}
+            >
+              {favoritingId === memory.id ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Heart
+                  size={18}
+                  className={cn(favorites[memory.id] && "fill-current")}
+                />
+              )}
+            </button>
 
             {/* Memory Info Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
@@ -82,7 +170,7 @@ export default function GalleryGrid({ memories }) {
                 )}
               </div>
             </div>
-          </Link>
+          </div>
         </motion.div>
       ))}
     </Masonry>
