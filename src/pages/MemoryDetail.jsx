@@ -349,10 +349,8 @@ export default function MemoryDetail() {
           url: shareUrl,
         });
       } else {
-        // Fallback: Copy link to clipboard
-        await navigator.clipboard.writeText(shareUrl);
-        setShareSuccess(true);
-        setTimeout(() => setShareSuccess(false), 2000);
+        // Show share options modal
+        setShowShareConfirm(true);
       }
     } catch (err) {
       if (err.name !== "AbortError") {
@@ -361,6 +359,43 @@ export default function MemoryDetail() {
       }
     } finally {
       setIsSharing(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      const shareUrl = `${window.location.origin}/shared/${memory.id}`;
+      await navigator.clipboard.writeText(shareUrl);
+      setShareSuccess(true);
+      setTimeout(() => setShareSuccess(false), 2000);
+      setShowShareConfirm(false);
+    } catch (err) {
+      console.error("Error copying link:", err);
+      setError("Failed to copy link. Please try again.");
+    }
+  };
+
+  const handleMakePrivate = async () => {
+    try {
+      setIsTogglingPublic(true);
+      setError(null);
+
+      const { error } = await supabase
+        .from("media")
+        .update({ is_public: false })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update local state
+      setMemory((prev) => ({ ...prev, isPublic: false }));
+      setEditedMemory((prev) => ({ ...prev, isPublic: false }));
+      setShowShareConfirm(false);
+    } catch (err) {
+      console.error("Error updating public status:", err);
+      setError("Failed to update public status. Please try again.");
+    } finally {
+      setIsTogglingPublic(false);
     }
   };
 
@@ -649,32 +684,34 @@ export default function MemoryDetail() {
                 className="space-y-6"
               >
                 <div className="flex justify-between items-start">
-                  <h1 className="text-2xl font-bold text-gray-900">
-                    {memory.title}
-                  </h1>
-                  <div className="flex items-center space-x-2 flex-wrap gap-4 sm:gap-2">
+                  <div className="flex items-center gap-2">
+                    <h1 className="text-xl font-bold text-gray-900">
+                      {memory.title.length > 12
+                        ? memory.title.substring(0, 15) + "..."
+                        : memory.title}
+                    </h1>
                     <button
                       onClick={handleTogglePublic}
                       disabled={isTogglingPublic}
                       className={cn(
-                        "btn-ghost flex items-center",
-                        memory.isPublic ? "text-primary-600" : "text-gray-600"
+                        "text-gray-500 hover:text-primary-600 transition-colors",
+                        memory.isPublic && "text-primary-600"
                       )}
+                      title={memory.isPublic ? "Public" : "Private"}
                     >
                       {isTogglingPublic ? (
-                        <Loader2 size={18} className="mr-1 animate-spin" />
+                        <Loader2 size={18} className="animate-spin" />
                       ) : memory.isPublic ? (
-                        <Unlock size={18} className="mr-1" />
+                        <Unlock size={18} />
                       ) : (
-                        <Lock size={18} className="mr-1" />
+                        <Lock size={18} />
                       )}
-                      {memory.isPublic ? "Public" : "Private"}
-                    </button>
-                    <button onClick={handleEdit} className="btn-ghost">
-                      <Edit size={18} className="mr-1" />
-                      Edit
                     </button>
                   </div>
+                  <button onClick={handleEdit} className="btn-ghost">
+                    <Edit size={18} className="mr-1" />
+                    Edit
+                  </button>
                 </div>
 
                 <div className="flex items-center text-gray-600 text-sm space-x-4">
@@ -787,38 +824,68 @@ export default function MemoryDetail() {
               className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
             >
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Make Memory Public?
+                {!memory.isPublic ? "Make Memory Public?" : "Share Options"}
               </h3>
               <p className="text-gray-600 mb-6">
-                This memory will be made public and accessible to anyone with
-                the link. You can make it private again later.
+                {!memory.isPublic
+                  ? "This memory will be made public and accessible to anyone with the link. You can make it private again later."
+                  : "Choose how you want to share this memory."}
               </p>
               <div className="flex justify-end space-x-3">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={handleCancelShare}
+                  onClick={() => setShowShareConfirm(false)}
                   className="btn-outline"
-                  disabled={isSharing}
+                  disabled={isSharing || isTogglingPublic}
                 >
                   Cancel
                 </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={handleConfirmShare}
-                  className="btn-primary"
-                  disabled={isSharing}
-                >
-                  {isSharing ? (
-                    <>
-                      <Loader2 size={16} className="mr-1 animate-spin" />
-                      Sharing...
-                    </>
-                  ) : (
-                    "Make Public & Share"
-                  )}
-                </motion.button>
+                {!memory.isPublic ? (
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleConfirmShare}
+                    className="btn-primary"
+                    disabled={isSharing}
+                  >
+                    {isSharing ? (
+                      <>
+                        <Loader2 size={16} className="mr-1 animate-spin" />
+                        Sharing...
+                      </>
+                    ) : (
+                      "Make Public & Share"
+                    )}
+                  </motion.button>
+                ) : (
+                  <>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleCopyLink}
+                      className="btn-outline"
+                      disabled={isSharing}
+                    >
+                      <Copy size={16} className="mr-1" />
+                      Copy Link
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleMakePrivate}
+                      className="btn-error"
+                      disabled={isTogglingPublic}
+                    >
+                      {isTogglingPublic ? (
+                        <Loader2 size={16} className="mr-1 animate-spin" />
+                      ) : (
+                        <Lock size={16} className="mr-1" />
+                      )}
+                      Make Private
+                    </motion.button>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>
