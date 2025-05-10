@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import {
@@ -9,6 +9,8 @@ import {
   Image as ImageIcon,
   X,
   Loader2,
+  ChevronDown,
+  Video,
 } from "lucide-react";
 
 import MediaUploader from "../components/upload/MediaUploader";
@@ -99,6 +101,109 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState("grid");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filters, setFilters] = useState({
+    emotions: [],
+    tags: [],
+    dateRange: {
+      start: null,
+      end: null,
+    },
+    mediaType: [],
+  });
+  const filterRef = useRef(null);
+
+  // Get unique emotions and tags from memories
+  const uniqueEmotions = [...new Set(memories.map((m) => m.emotion))].filter(
+    Boolean
+  );
+  const uniqueTags = [...new Set(memories.flatMap((m) => m.tags || []))].filter(
+    Boolean
+  );
+
+  // Filter memories based on selected filters
+  const filteredMemories = memories.filter((memory) => {
+    // Filter by media type
+    if (
+      filters.mediaType.length > 0 &&
+      !filters.mediaType.includes(memory.type)
+    ) {
+      return false;
+    }
+
+    // Filter by emotions
+    if (
+      filters.emotions.length > 0 &&
+      !filters.emotions.includes(memory.emotion)
+    ) {
+      return false;
+    }
+
+    // Filter by tags
+    if (
+      filters.tags.length > 0 &&
+      !filters.tags.some((tag) => memory.tags?.includes(tag))
+    ) {
+      return false;
+    }
+
+    // Filter by date range
+    if (
+      filters.dateRange.start &&
+      new Date(memory.createdAt) < new Date(filters.dateRange.start)
+    ) {
+      return false;
+    }
+    if (
+      filters.dateRange.end &&
+      new Date(memory.createdAt) > new Date(filters.dateRange.end)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+
+  const handleFilterChange = (type, value) => {
+    setFilters((prev) => {
+      if (type === "emotions" || type === "tags") {
+        return {
+          ...prev,
+          [type]: prev[type].includes(value)
+            ? prev[type].filter((item) => item !== value)
+            : [...prev[type], value],
+        };
+      } else if (type === "dateRange") {
+        return {
+          ...prev,
+          dateRange: {
+            ...prev.dateRange,
+            ...value,
+          },
+        };
+      } else if (type === "mediaType") {
+        return {
+          ...prev,
+          mediaType: prev.mediaType.includes(value)
+            ? prev.mediaType.filter((item) => item !== value)
+            : [...prev.mediaType, value],
+        };
+      }
+      return prev;
+    });
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      emotions: [],
+      tags: [],
+      dateRange: {
+        start: null,
+        end: null,
+      },
+      mediaType: [],
+    });
+  };
 
   useEffect(() => {
     const fetchMemories = async () => {
@@ -153,12 +258,26 @@ export default function Dashboard() {
     setIsUploadModalOpen(false);
   };
 
+  // Add click outside handler
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setIsFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header with welcome message */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-gray-900">
             Welcome, {user?.firstName || "Friend"}!
           </h1>
           <p className="text-gray-600">Your personal memory gallery</p>
@@ -179,11 +298,161 @@ export default function Dashboard() {
 
       {/* Filters and view toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
-        <div className="flex items-center">
-          <button className="btn-outline flex items-center">
-            <Filter size={16} className="mr-2" />
-            <span>Filter</span>
-          </button>
+        <div className="flex items-center space-x-2">
+          <div className="relative" ref={filterRef}>
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="btn-outline flex items-center"
+            >
+              <Filter size={16} className="mr-2" />
+              <span>Filter</span>
+              <ChevronDown
+                size={16}
+                className={cn(
+                  "ml-2 transition-transform duration-200",
+                  isFilterOpen ? "rotate-180" : ""
+                )}
+              />
+            </button>
+
+            {isFilterOpen && (
+              <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10">
+                <div className="space-y-4">
+                  {/* Media Type Filter */}
+                  <div>
+                    <h3 className="font-medium mb-2">Media Type</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleFilterChange("mediaType", "image")}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-sm flex items-center",
+                          filters.mediaType.includes("image")
+                            ? "bg-primary-100 text-primary-700"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        )}
+                      >
+                        <ImageIcon size={16} className="mr-1.5" />
+                        Images
+                      </button>
+                      <button
+                        onClick={() => handleFilterChange("mediaType", "video")}
+                        className={cn(
+                          "px-3 py-1.5 rounded-md text-sm flex items-center",
+                          filters.mediaType.includes("video")
+                            ? "bg-primary-100 text-primary-700"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        )}
+                      >
+                        <Video size={16} className="mr-1.5" />
+                        Videos
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Emotions Filter */}
+                  <div>
+                    <h3 className="font-medium mb-2">Emotions</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueEmotions.map((emotion) => (
+                        <button
+                          key={emotion}
+                          onClick={() =>
+                            handleFilterChange("emotions", emotion)
+                          }
+                          className={cn(
+                            "px-2 py-1 rounded-full text-sm",
+                            filters.emotions.includes(emotion)
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          )}
+                        >
+                          {emotion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tags Filter */}
+                  <div>
+                    <h3 className="font-medium mb-2">Tags</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {uniqueTags.map((tag) => (
+                        <button
+                          key={tag}
+                          onClick={() => handleFilterChange("tags", tag)}
+                          className={cn(
+                            "px-2 py-1 rounded-full text-sm",
+                            filters.tags.includes(tag)
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          )}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Date Range Filter */}
+                  <div>
+                    <h3 className="font-medium mb-2">Date Range</h3>
+                    <div className="space-y-2">
+                      <input
+                        type="date"
+                        value={filters.dateRange.start || ""}
+                        onChange={(e) =>
+                          handleFilterChange("dateRange", {
+                            start: e.target.value,
+                          })
+                        }
+                        className="w-full px-2 py-1 border rounded"
+                      />
+                      <input
+                        type="date"
+                        value={filters.dateRange.end || ""}
+                        onChange={(e) =>
+                          handleFilterChange("dateRange", {
+                            end: e.target.value,
+                          })
+                        }
+                        className="w-full px-2 py-1 border rounded"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Clear Filters */}
+                  {(filters.emotions.length > 0 ||
+                    filters.tags.length > 0 ||
+                    filters.dateRange.start ||
+                    filters.dateRange.end ||
+                    filters.mediaType.length > 0) && (
+                    <button
+                      onClick={clearFilters}
+                      className="w-full btn-outline text-sm"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Active Filters Count */}
+          {(filters.emotions.length > 0 ||
+            filters.tags.length > 0 ||
+            filters.dateRange.start ||
+            filters.dateRange.end ||
+            filters.mediaType.length > 0) && (
+            <span className="text-sm text-gray-600">
+              {filters.emotions.length +
+                filters.tags.length +
+                (filters.dateRange.start ? 1 : 0) +
+                (filters.dateRange.end ? 1 : 0) +
+                filters.mediaType.length}{" "}
+              active filters
+            </span>
+          )}
         </div>
 
         <div className="flex items-center bg-gray-100 rounded-md p-1">
@@ -228,13 +497,13 @@ export default function Dashboard() {
             Try Again
           </button>
         </div>
-      ) : memories.length > 0 ? (
+      ) : filteredMemories.length > 0 ? (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <GalleryGrid memories={memories} viewMode={viewMode} />
+          <GalleryGrid memories={filteredMemories} viewMode={viewMode} />
         </motion.div>
       ) : (
         <motion.div

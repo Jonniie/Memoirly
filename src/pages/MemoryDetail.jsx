@@ -13,6 +13,8 @@ import {
   ArrowLeft,
   Save,
   Loader2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "../lib/supabase";
@@ -28,6 +30,9 @@ export default function MemoryDetail() {
   const [error, setError] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isFavoriting, setIsFavoriting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [shareSuccess, setShareSuccess] = useState(false);
 
   useEffect(() => {
     const fetchMemory = async () => {
@@ -116,12 +121,25 @@ export default function MemoryDetail() {
   };
 
   const handleTagsChange = (e) => {
-    const tagsString = e.target.value;
+    // Just store the raw input value
+    setEditedMemory((prev) => ({
+      ...prev,
+      tagsInput: e.target.value,
+      tags: prev.tags, // Keep existing processed tags
+    }));
+  };
+
+  const processTags = () => {
+    const tagsString = editedMemory.tagsInput;
     const tagsArray = tagsString
-      .split(",")
+      .split(/[,\s]+/)
       .map((tag) => tag.trim())
-      .filter(Boolean);
-    setEditedMemory((prev) => ({ ...prev, tags: tagsArray }));
+      .filter((tag) => tag.length > 0);
+
+    setEditedMemory((prev) => ({
+      ...prev,
+      tags: tagsArray,
+    }));
   };
 
   const handleToggleFavorite = async () => {
@@ -146,6 +164,94 @@ export default function MemoryDetail() {
       setError("Failed to update favorite status. Please try again.");
     } finally {
       setIsFavoriting(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      setError(null);
+
+      // Fetch the file
+      const response = await fetch(memory.url);
+      if (!response.ok) throw new Error("Failed to fetch file");
+
+      // Get the blob data
+      const blob = await response.blob();
+
+      // Create a temporary URL for the blob
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Format the filename
+      let filename = memory.title || `memory-${memory.id}`;
+
+      // Check if filename already has an extension
+      const hasExtension = /\.[^/.]+$/.test(filename);
+
+      // Only add extension if it doesn't have one
+      if (!hasExtension) {
+        if (memory.type === "image") {
+          filename += ".jpg";
+        } else if (memory.type === "video") {
+          // Get the extension from the URL or default to .mp4
+          const urlExtension = memory.url.split(".").pop().toLowerCase();
+          filename += `.${urlExtension || "mp4"}`;
+        }
+      }
+
+      // Clean the filename (remove special characters and spaces)
+      filename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
+
+      // Create a temporary anchor element
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+
+      // Append to body, click, and cleanup
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.error("Error downloading memory:", err);
+      setError("Failed to download memory. Please try again.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      setIsSharing(true);
+      setError(null);
+
+      // Check if Web Share API is available
+      if (navigator.share) {
+        await navigator.share({
+          title: memory.title,
+          text:
+            memory.note ||
+            `Check out this memory from ${format(
+              new Date(memory.createdAt),
+              "MMMM d, yyyy"
+            )}`,
+          url: window.location.href,
+        });
+      } else {
+        // Fallback: Copy link to clipboard
+        await navigator.clipboard.writeText(window.location.href);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Error sharing memory:", err);
+        setError("Failed to share memory. Please try again.");
+      }
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -319,10 +425,14 @@ export default function MemoryDetail() {
                     type="text"
                     id="tags"
                     name="tags"
-                    value={editedMemory.tags.join(", ")}
+                    value={
+                      editedMemory.tagsInput || editedMemory.tags.join(", ")
+                    }
                     onChange={handleTagsChange}
+                    onBlur={processTags}
                     className="input"
                     disabled={isSaving}
+                    placeholder="Add tags (separated by commas or spaces)"
                   />
                 </div>
 
@@ -439,13 +549,31 @@ export default function MemoryDetail() {
                   </button>
 
                   <div className="flex space-x-2">
-                    <button className="btn-outline flex items-center">
-                      <Download size={18} className="mr-1" />
+                    <button
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className="btn-outline flex items-center"
+                    >
+                      {isDownloading ? (
+                        <Loader2 size={18} className="mr-1 animate-spin" />
+                      ) : (
+                        <Download size={18} className="mr-1" />
+                      )}
                       Download
                     </button>
-                    <button className="btn-outline flex items-center">
-                      <Share2 size={18} className="mr-1" />
-                      Share
+                    <button
+                      onClick={handleShare}
+                      disabled={isSharing}
+                      className="btn-outline flex items-center"
+                    >
+                      {isSharing ? (
+                        <Loader2 size={18} className="mr-1 animate-spin" />
+                      ) : shareSuccess ? (
+                        <Check size={18} className="mr-1" />
+                      ) : (
+                        <Share2 size={18} className="mr-1" />
+                      )}
+                      {shareSuccess ? "Copied!" : "Share"}
                     </button>
                   </div>
                 </div>
