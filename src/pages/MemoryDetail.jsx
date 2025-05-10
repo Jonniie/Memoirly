@@ -116,6 +116,8 @@ export default function MemoryDetail() {
   const [shareSuccess, setShareSuccess] = useState(false);
   const [isTogglingPublic, setIsTogglingPublic] = useState(false);
   const [showShareConfirm, setShowShareConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const pageRef = useRef(null);
   const mediaRef = useRef(null);
   const detailsRef = useRef(null);
@@ -453,6 +455,20 @@ export default function MemoryDetail() {
     setIsSharing(false);
   };
 
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      setError(null);
+      const { error } = await supabase.from("media").delete().eq("id", id);
+      if (error) throw error;
+      navigate("/dashboard");
+    } catch (err) {
+      console.error("Error deleting memory:", err);
+      setError("Failed to delete memory. Please try again.");
+      setIsDeleting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -708,10 +724,19 @@ export default function MemoryDetail() {
                       )}
                     </button>
                   </div>
-                  <button onClick={handleEdit} className="btn-ghost">
-                    <Edit size={18} className="mr-1" />
-                    Edit
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleEdit} className="btn-ghost">
+                      <Edit size={18} className="mr-1 lg:mr-0" />
+                      <span className="lg:hidden">Edit</span>
+                    </button>
+                    <button
+                      onClick={() => setShowDeleteConfirm(true)}
+                      className="btn-ghost text-error-600 hover:text-error-700 hover:bg-error-50"
+                    >
+                      <Trash2 size={18} className="mr-1 lg:mr-0" />
+                      <span className="lg:hidden">Delete</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="flex items-center text-gray-600 text-sm space-x-4">
@@ -886,6 +911,62 @@ export default function MemoryDetail() {
                     </motion.button>
                   </>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={overlayVariants}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              variants={modalVariants}
+              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Delete Memory?
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this memory? This action cannot
+                be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="btn-outline"
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDelete}
+                  className="btn-error"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 size={16} className="mr-1 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} className="mr-1" />
+                      Delete
+                    </>
+                  )}
+                </motion.button>
               </div>
             </motion.div>
           </motion.div>
