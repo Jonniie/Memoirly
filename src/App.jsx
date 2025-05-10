@@ -12,6 +12,7 @@ import MemoryDetail from "./pages/MemoryDetail";
 import AlbumPage from "./pages/AlbumPage";
 import TimelinePage from "./pages/TimelinePage";
 import NotFoundPage from "./pages/NotFoundPage";
+import SharedMemory from "./pages/SharedMemory";
 
 // Components
 import Layout from "./components/layout/Layout";
@@ -32,6 +33,9 @@ function App() {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         <Route path="/" element={<HomePage />} />
+
+        {/* Public shared memory route */}
+        <Route path="/shared/:id" element={<SharedMemory />} />
 
         <Route element={<Layout />}>
           <Route

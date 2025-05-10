@@ -1,16 +1,26 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import Masonry from "react-masonry-css";
-import { Calendar, MapPin, Tag, Heart, Loader2 } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Tag,
+  Heart,
+  Loader2,
+  Image as ImageIcon,
+  Video,
+} from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
+import { gridItemEnter } from "../../lib/animations";
 
 export default function GalleryGrid({ memories, viewMode = "grid" }) {
   const navigate = useNavigate();
   const [favoritingId, setFavoritingId] = useState(null);
   const [favorites, setFavorites] = useState({});
+  const gridRef = useRef(null);
 
   // Fetch favorite status for all memories
   useEffect(() => {
@@ -42,6 +52,15 @@ export default function GalleryGrid({ memories, viewMode = "grid" }) {
       fetchFavorites();
     }
   }, [memories]);
+
+  useEffect(() => {
+    if (gridRef.current) {
+      const items = gridRef.current.children;
+      Array.from(items).forEach((item, index) => {
+        gridItemEnter(item, index);
+      });
+    }
+  }, [memories, viewMode]);
 
   const breakpointColumns = {
     default: 4,
@@ -193,7 +212,11 @@ export default function GalleryGrid({ memories, viewMode = "grid" }) {
   );
 
   if (viewMode === "list") {
-    return <div className="space-y-4">{memories.map(renderMemoryCard)}</div>;
+    return (
+      <div ref={gridRef} className="space-y-4">
+        {memories.map(renderMemoryCard)}
+      </div>
+    );
   }
 
   return (

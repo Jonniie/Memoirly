@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import {
@@ -12,11 +12,20 @@ import {
   ChevronDown,
   Video,
 } from "lucide-react";
+import { gsap } from "gsap";
 
 import MediaUploader from "../components/upload/MediaUploader";
 import GalleryGrid from "../components/gallery/GalleryGrid";
 import { cn } from "../lib/utils";
 import { getUserMedia } from "../lib/supabaseHelpers";
+import {
+  pageEnter,
+  filterEnter,
+  filterExit,
+  staggerChildren,
+  modalEnter,
+  modalExit,
+} from "../lib/animations";
 
 // Mock data for now
 // const mockMemories = [
@@ -103,15 +112,17 @@ export default function Dashboard() {
   const [error, setError] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({
-    emotions: [],
+    emotion: "",
     tags: [],
-    dateRange: {
-      start: null,
-      end: null,
-    },
-    mediaType: [],
+    dateRange: { start: null, end: null },
+    mediaType: "all",
+    privacy: "all",
   });
   const filterRef = useRef(null);
+  const pageRef = useRef(null);
+  const filterPanelRef = useRef(null);
+  const headerRef = useRef(null);
+  const uploadModalRef = useRef(null);
 
   // Get unique emotions and tags from memories
   const uniqueEmotions = [...new Set(memories.map((m) => m.emotion))].filter(
@@ -122,86 +133,66 @@ export default function Dashboard() {
   );
 
   // Filter memories based on selected filters
-  const filteredMemories = memories.filter((memory) => {
-    // Filter by media type
-    if (
-      filters.mediaType.length > 0 &&
-      !filters.mediaType.includes(memory.type)
-    ) {
-      return false;
-    }
-
-    // Filter by emotions
-    if (
-      filters.emotions.length > 0 &&
-      !filters.emotions.includes(memory.emotion)
-    ) {
-      return false;
-    }
-
-    // Filter by tags
-    if (
-      filters.tags.length > 0 &&
-      !filters.tags.some((tag) => memory.tags?.includes(tag))
-    ) {
-      return false;
-    }
-
-    // Filter by date range
-    if (
-      filters.dateRange.start &&
-      new Date(memory.createdAt) < new Date(filters.dateRange.start)
-    ) {
-      return false;
-    }
-    if (
-      filters.dateRange.end &&
-      new Date(memory.createdAt) > new Date(filters.dateRange.end)
-    ) {
-      return false;
-    }
-
-    return true;
-  });
-
-  const handleFilterChange = (type, value) => {
-    setFilters((prev) => {
-      if (type === "emotions" || type === "tags") {
-        return {
-          ...prev,
-          [type]: prev[type].includes(value)
-            ? prev[type].filter((item) => item !== value)
-            : [...prev[type], value],
-        };
-      } else if (type === "dateRange") {
-        return {
-          ...prev,
-          dateRange: {
-            ...prev.dateRange,
-            ...value,
-          },
-        };
-      } else if (type === "mediaType") {
-        return {
-          ...prev,
-          mediaType: prev.mediaType.includes(value)
-            ? prev.mediaType.filter((item) => item !== value)
-            : [...prev.mediaType, value],
-        };
+  const filteredMemories = useMemo(() => {
+    return memories.filter((memory) => {
+      // Emotion filter
+      if (filters.emotion && memory.emotion !== filters.emotion) {
+        return false;
       }
-      return prev;
+
+      // Tags filter
+      if (filters.tags.length > 0) {
+        const hasMatchingTag = filters.tags.some((tag) =>
+          memory.tags.includes(tag)
+        );
+        if (!hasMatchingTag) return false;
+      }
+
+      // Date range filter
+      if (filters.dateRange.start && filters.dateRange.end) {
+        const memoryDate = new Date(memory.createdAt);
+        const startDate = new Date(filters.dateRange.start);
+        const endDate = new Date(filters.dateRange.end);
+        endDate.setHours(23, 59, 59, 999); // Include the entire end day
+
+        if (memoryDate < startDate || memoryDate > endDate) {
+          return false;
+        }
+      }
+
+      // Media type filter
+      if (filters.mediaType !== "all" && memory.type !== filters.mediaType) {
+        return false;
+      }
+
+      // Privacy filter
+      if (filters.privacy !== "all") {
+        const isPublic = memory.isPublic || false;
+        if (filters.privacy === "public" && !isPublic) return false;
+        if (filters.privacy === "private" && isPublic) return false;
+      }
+
+      return true;
     });
+  }, [memories, filters]);
+
+  const handleFilterChange = (filterType, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [filterType]: value,
+    }));
   };
 
   const clearFilters = () => {
     setFilters({
-      emotions: [],
+      emotion: "",
       tags: [],
       dateRange: {
         start: null,
         end: null,
       },
-      mediaType: [],
+      mediaType: "all",
+      privacy: "all",
     });
   };
 
@@ -224,6 +215,7 @@ export default function Dashboard() {
           createdAt: media.created_at,
           tags: media.tags || [],
           emotion: media.emotion || "neutral",
+          isPublic: media.is_public || false, // Add isPublic field from database
         }));
 
         setMemories(transformedMemories);
@@ -252,6 +244,7 @@ export default function Dashboard() {
       tags: media.tags || [],
       emotion: media.emotion || "neutral",
       favourite: media.favourite || false,
+      isPublic: media.is_public || false, // Add isPublic field for new uploads
     }));
 
     setMemories((prev) => [...newMemories, ...prev]);
@@ -272,10 +265,65 @@ export default function Dashboard() {
     };
   }, []);
 
+  // Initialize animations
+  useEffect(() => {
+    if (pageRef.current) {
+      pageEnter(pageRef.current);
+    }
+  }, []);
+
+  // Animate filter panel
+  useEffect(() => {
+    if (filterPanelRef.current) {
+      if (isFilterOpen) {
+        filterEnter(filterPanelRef.current);
+      } else {
+        filterExit(filterPanelRef.current);
+      }
+    }
+  }, [isFilterOpen]);
+
+  // Animate header
+  useEffect(() => {
+    if (headerRef.current) {
+      gsap.fromTo(
+        headerRef.current.children,
+        { y: -20, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.5,
+          stagger: 0.1,
+          ease: "power2.out",
+        }
+      );
+    }
+  }, []);
+
+  // Animate upload modal
+  useEffect(() => {
+    if (isUploadModalOpen && uploadModalRef.current) {
+      modalEnter(uploadModalRef.current);
+    }
+  }, [isUploadModalOpen]);
+
+  const handleCloseUploadModal = () => {
+    if (uploadModalRef.current) {
+      modalExit(uploadModalRef.current).then(() => {
+        setIsUploadModalOpen(false);
+      });
+    } else {
+      setIsUploadModalOpen(false);
+    }
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div ref={pageRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Header with welcome message */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8">
+      <div
+        ref={headerRef}
+        className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8"
+      >
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             Welcome, {user?.firstName || "Friend"}!
@@ -316,7 +364,10 @@ export default function Dashboard() {
             </button>
 
             {isFilterOpen && (
-              <div className="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10">
+              <div
+                ref={filterPanelRef}
+                className="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10"
+              >
                 <div className="space-y-4">
                   {/* Media Type Filter */}
                   <div>
@@ -326,7 +377,7 @@ export default function Dashboard() {
                         onClick={() => handleFilterChange("mediaType", "image")}
                         className={cn(
                           "px-3 py-1.5 rounded-md text-sm flex items-center",
-                          filters.mediaType.includes("image")
+                          filters.mediaType === "image"
                             ? "bg-primary-100 text-primary-700"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         )}
@@ -338,7 +389,7 @@ export default function Dashboard() {
                         onClick={() => handleFilterChange("mediaType", "video")}
                         className={cn(
                           "px-3 py-1.5 rounded-md text-sm flex items-center",
-                          filters.mediaType.includes("video")
+                          filters.mediaType === "video"
                             ? "bg-primary-100 text-primary-700"
                             : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                         )}
@@ -356,12 +407,10 @@ export default function Dashboard() {
                       {uniqueEmotions.map((emotion) => (
                         <button
                           key={emotion}
-                          onClick={() =>
-                            handleFilterChange("emotions", emotion)
-                          }
+                          onClick={() => handleFilterChange("emotion", emotion)}
                           className={cn(
                             "px-2 py-1 rounded-full text-sm",
-                            filters.emotions.includes(emotion)
+                            filters.emotion === emotion
                               ? "bg-primary-100 text-primary-700"
                               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                           )}
@@ -420,12 +469,53 @@ export default function Dashboard() {
                     </div>
                   </div>
 
+                  {/* Privacy Filter */}
+                  <div>
+                    <h3 className="font-medium mb-2">Privacy</h3>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleFilterChange("privacy", "all")}
+                        className={cn(
+                          "px-2 py-1 rounded-full text-sm",
+                          filters.privacy === "all"
+                            ? "bg-primary-100 text-primary-700"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        )}
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => handleFilterChange("privacy", "public")}
+                        className={cn(
+                          "px-2 py-1 rounded-full text-sm",
+                          filters.privacy === "public"
+                            ? "bg-primary-100 text-primary-700"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        )}
+                      >
+                        Public
+                      </button>
+                      <button
+                        onClick={() => handleFilterChange("privacy", "private")}
+                        className={cn(
+                          "px-2 py-1 rounded-full text-sm",
+                          filters.privacy === "private"
+                            ? "bg-primary-100 text-primary-700"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        )}
+                      >
+                        Private
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Clear Filters */}
-                  {(filters.emotions.length > 0 ||
+                  {(filters.emotion ||
                     filters.tags.length > 0 ||
                     filters.dateRange.start ||
                     filters.dateRange.end ||
-                    filters.mediaType.length > 0) && (
+                    filters.mediaType !== "all" ||
+                    filters.privacy !== "all") && (
                     <button
                       onClick={clearFilters}
                       className="w-full btn-outline text-sm"
@@ -439,17 +529,21 @@ export default function Dashboard() {
           </div>
 
           {/* Active Filters Count */}
-          {(filters.emotions.length > 0 ||
+          {(filters.emotion ||
             filters.tags.length > 0 ||
             filters.dateRange.start ||
             filters.dateRange.end ||
-            filters.mediaType.length > 0) && (
+            filters.mediaType !== "all" ||
+            filters.privacy !== "all") && (
             <span className="text-sm text-gray-600">
-              {filters.emotions.length +
-                filters.tags.length +
-                (filters.dateRange.start ? 1 : 0) +
-                (filters.dateRange.end ? 1 : 0) +
-                filters.mediaType.length}{" "}
+              {[
+                filters.emotion ? 1 : 0,
+                filters.tags.length,
+                filters.dateRange.start ? 1 : 0,
+                filters.dateRange.end ? 1 : 0,
+                filters.mediaType !== "all" ? 1 : 0,
+                filters.privacy !== "all" ? 1 : 0,
+              ].reduce((a, b) => a + b, 0)}{" "}
               active filters
             </span>
           )}
@@ -533,6 +627,7 @@ export default function Dashboard() {
       {isUploadModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <motion.div
+            ref={uploadModalRef}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
@@ -544,7 +639,7 @@ export default function Dashboard() {
                   Upload Memories
                 </h2>
                 <button
-                  onClick={() => setIsUploadModalOpen(false)}
+                  onClick={handleCloseUploadModal}
                   className="text-gray-400 hover:text-gray-500"
                 >
                   <X size={24} />

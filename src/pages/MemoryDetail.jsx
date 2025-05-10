@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
   Tag,
@@ -15,10 +15,98 @@ import {
   Loader2,
   Copy,
   Check,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { format } from "date-fns";
+import { gsap } from "gsap";
 import { supabase } from "../lib/supabase";
 import { cn } from "../lib/utils";
+import {
+  pageEnter,
+  slideInRight,
+  modalEnter,
+  modalExit,
+} from "../lib/animations";
+
+// Animation variants
+const pageVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+};
+
+const contentVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+};
+
+const mediaVariants = {
+  initial: { opacity: 0, scale: 0.95 },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.6,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+};
+
+const detailsVariants = {
+  initial: { opacity: 0, x: 20 },
+  animate: {
+    opacity: 1,
+    x: 0,
+    transition: {
+      duration: 0.5,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+};
+
+const modalVariants = {
+  initial: { opacity: 0, scale: 0.95 },
+  animate: {
+    opacity: 1,
+    scale: 1,
+    transition: {
+      duration: 0.3,
+      ease: [0.4, 0, 0.2, 1],
+    },
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    transition: {
+      duration: 0.2,
+      ease: [0.4, 0, 1, 1],
+    },
+  },
+};
+
+const overlayVariants = {
+  initial: { opacity: 0 },
+  animate: {
+    opacity: 1,
+    transition: {
+      duration: 0.3,
+    },
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0.2,
+    },
+  },
+};
 
 export default function MemoryDetail() {
   const { id } = useParams();
@@ -33,6 +121,12 @@ export default function MemoryDetail() {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [shareSuccess, setShareSuccess] = useState(false);
+  const [isTogglingPublic, setIsTogglingPublic] = useState(false);
+  const [showShareConfirm, setShowShareConfirm] = useState(false);
+  const pageRef = useRef(null);
+  const mediaRef = useRef(null);
+  const detailsRef = useRef(null);
+  const shareModalRef = useRef(null);
 
   useEffect(() => {
     const fetchMemory = async () => {
@@ -62,6 +156,7 @@ export default function MemoryDetail() {
             emotion: data.emotion || "neutral",
             location: data.location || "",
             favourite: data.favourite || false,
+            isPublic: data.is_public || false,
           };
 
           setMemory(transformedMemory);
@@ -77,6 +172,32 @@ export default function MemoryDetail() {
 
     fetchMemory();
   }, [id]);
+
+  // Initialize animations
+  useEffect(() => {
+    if (pageRef.current) {
+      pageEnter(pageRef.current);
+    }
+  }, []);
+
+  // Animate media and details sections
+  useEffect(() => {
+    if (mediaRef.current && detailsRef.current) {
+      gsap.fromTo(
+        mediaRef.current,
+        { opacity: 0, scale: 0.95 },
+        { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" }
+      );
+      slideInRight(detailsRef.current);
+    }
+  }, [memory]);
+
+  // Animate share modal
+  useEffect(() => {
+    if (showShareConfirm && shareModalRef.current) {
+      modalEnter(shareModalRef.current);
+    }
+  }, [showShareConfirm]);
 
   const handleGoBack = () => {
     navigate(-1);
@@ -222,10 +343,44 @@ export default function MemoryDetail() {
     }
   };
 
+  const handleTogglePublic = async () => {
+    try {
+      setIsTogglingPublic(true);
+      setError(null);
+
+      const newPublicState = !memory.isPublic;
+
+      const { error } = await supabase
+        .from("media")
+        .update({ is_public: newPublicState })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update local state
+      setMemory((prev) => ({ ...prev, isPublic: newPublicState }));
+      setEditedMemory((prev) => ({ ...prev, isPublic: newPublicState }));
+    } catch (err) {
+      console.error("Error updating public status:", err);
+      setError("Failed to update public status. Please try again.");
+    } finally {
+      setIsTogglingPublic(false);
+    }
+  };
+
   const handleShare = async () => {
     try {
       setIsSharing(true);
       setError(null);
+
+      // If memory is not public, show confirmation modal
+      if (!memory.isPublic) {
+        setShowShareConfirm(true);
+        return;
+      }
+
+      // Generate the shared memory URL
+      const shareUrl = `${window.location.origin}/shared/${memory.id}`;
 
       // Check if Web Share API is available
       if (navigator.share) {
@@ -237,11 +392,11 @@ export default function MemoryDetail() {
               new Date(memory.createdAt),
               "MMMM d, yyyy"
             )}`,
-          url: window.location.href,
+          url: shareUrl,
         });
       } else {
         // Fallback: Copy link to clipboard
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         setShareSuccess(true);
         setTimeout(() => setShareSuccess(false), 2000);
       }
@@ -251,6 +406,67 @@ export default function MemoryDetail() {
         setError("Failed to share memory. Please try again.");
       }
     } finally {
+      setIsSharing(false);
+    }
+  };
+
+  const handleConfirmShare = async () => {
+    try {
+      setIsSharing(true);
+      setError(null);
+
+      // Make the memory public
+      const { error: updateError } = await supabase
+        .from("media")
+        .update({ is_public: true })
+        .eq("id", id);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setMemory((prev) => ({ ...prev, isPublic: true }));
+      setEditedMemory((prev) => ({ ...prev, isPublic: true }));
+
+      // Generate the shared memory URL
+      const shareUrl = `${window.location.origin}/shared/${memory.id}`;
+
+      // Check if Web Share API is available
+      if (navigator.share) {
+        await navigator.share({
+          title: memory.title,
+          text:
+            memory.note ||
+            `Check out this memory from ${format(
+              new Date(memory.createdAt),
+              "MMMM d, yyyy"
+            )}`,
+          url: shareUrl,
+        });
+      } else {
+        // Fallback: Copy link to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        setShareSuccess(true);
+        setTimeout(() => setShareSuccess(false), 2000);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError") {
+        console.error("Error sharing memory:", err);
+        setError("Failed to share memory. Please try again.");
+      }
+    } finally {
+      setIsSharing(false);
+      setShowShareConfirm(false);
+    }
+  };
+
+  const handleCancelShare = () => {
+    if (shareModalRef.current) {
+      modalExit(shareModalRef.current).then(() => {
+        setShowShareConfirm(false);
+        setIsSharing(false);
+      });
+    } else {
+      setShowShareConfirm(false);
       setIsSharing(false);
     }
   };
@@ -296,50 +512,67 @@ export default function MemoryDetail() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <motion.div
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      variants={pageVariants}
+      className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+    >
       {/* Go back button */}
-      <button
+      <motion.button
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.3, delay: 0.2 }}
         onClick={handleGoBack}
         className="flex items-center text-gray-600 hover:text-primary-600 mb-6 transition-colors"
       >
         <ArrowLeft size={20} className="mr-1" />
         <span>Back to Gallery</span>
-      </button>
+      </motion.button>
 
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+      <motion.div
+        variants={contentVariants}
+        className="bg-white rounded-xl shadow-sm overflow-hidden"
+      >
         <div className="lg:flex">
           {/* Media Section */}
-          <div className="lg:w-7/12 bg-gray-100">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="relative"
-            >
+          <motion.div
+            variants={mediaVariants}
+            className="lg:w-7/12 bg-gray-100"
+          >
+            <div className="relative">
               {memory.type === "image" ? (
-                <img
+                <motion.img
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
                   src={memory.url}
                   alt={memory.title}
                   className="w-full h-full object-cover"
                   style={{ maxHeight: "80vh" }}
                 />
               ) : (
-                <video
+                <motion.video
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3 }}
                   src={memory.url}
                   controls
                   className="w-full h-full object-cover"
                   style={{ maxHeight: "80vh" }}
                 />
               )}
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
 
           {/* Details Section */}
-          <div className="lg:w-5/12 p-6">
+          <motion.div variants={detailsVariants} className="lg:w-5/12 p-6">
             {isEditMode ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
+                transition={{ duration: 0.3 }}
                 className="space-y-4"
               >
                 <div>
@@ -467,23 +700,36 @@ export default function MemoryDetail() {
               </motion.div>
             ) : (
               <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="space-y-4"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+                className="space-y-6"
               >
                 <div className="flex justify-between items-start">
                   <h1 className="text-2xl font-bold text-gray-900">
                     {memory.title}
                   </h1>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2 flex-wrap sm:flex-nowrap gap-4">
                     <button
-                      onClick={handleEdit}
-                      className="text-gray-500 hover:text-primary-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                      onClick={handleTogglePublic}
+                      disabled={isTogglingPublic}
+                      className={cn(
+                        "btn-ghost flex items-center",
+                        memory.isPublic ? "text-primary-600" : "text-gray-600"
+                      )}
                     >
-                      <Edit size={18} />
+                      {isTogglingPublic ? (
+                        <Loader2 size={18} className="mr-1 animate-spin" />
+                      ) : memory.isPublic ? (
+                        <Unlock size={18} className="mr-1" />
+                      ) : (
+                        <Lock size={18} className="mr-1" />
+                      )}
+                      {memory.isPublic ? "Public" : "Private"}
                     </button>
-                    <button className="text-gray-500 hover:text-error-600 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
-                      <Trash2 size={18} />
+                    <button onClick={handleEdit} className="btn-ghost">
+                      <Edit size={18} className="mr-1" />
+                      Edit
                     </button>
                   </div>
                 </div>
@@ -525,7 +771,7 @@ export default function MemoryDetail() {
                   </div>
                 )}
 
-                <div className="flex justify-between pt-6 border-t border-gray-200 mt-6">
+                <div className="flex justify-between pt-6 border-t border-gray-200 mt-6 flex-wrap sm:flex-nowrap gap-4">
                   <button
                     onClick={handleToggleFavorite}
                     disabled={isFavoriting}
@@ -579,9 +825,62 @@ export default function MemoryDetail() {
                 </div>
               </motion.div>
             )}
-          </div>
+          </motion.div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+
+      {/* Share Confirmation Modal */}
+      <AnimatePresence>
+        {showShareConfirm && (
+          <motion.div
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={overlayVariants}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              variants={modalVariants}
+              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Make Memory Public?
+              </h3>
+              <p className="text-gray-600 mb-6">
+                This memory will be made public and accessible to anyone with
+                the link. You can make it private again later.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleCancelShare}
+                  className="btn-outline"
+                  disabled={isSharing}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleConfirmShare}
+                  className="btn-primary"
+                  disabled={isSharing}
+                >
+                  {isSharing ? (
+                    <>
+                      <Loader2 size={16} className="mr-1 animate-spin" />
+                      Sharing...
+                    </>
+                  ) : (
+                    "Make Public & Share"
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
