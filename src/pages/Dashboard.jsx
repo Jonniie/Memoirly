@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import {
   Plus,
@@ -12,19 +12,18 @@ import {
   ChevronDown,
   Video,
 } from "lucide-react";
-import { gsap } from "gsap";
 
 import MediaUploader from "../components/upload/MediaUploader";
 import GalleryGrid from "../components/gallery/GalleryGrid";
 import { cn } from "../lib/utils";
 import { getUserMedia } from "../lib/supabaseHelpers";
 import {
-  pageEnter,
-  filterEnter,
-  filterExit,
-  staggerChildren,
-  modalEnter,
-  modalExit,
+  pageVariants,
+  filterVariants,
+  staggerContainer,
+  staggerItem,
+  modalVariants,
+  overlayVariants,
 } from "../lib/animations";
 
 // Mock data for now
@@ -196,6 +195,7 @@ export default function Dashboard() {
     });
   };
 
+  // Remove GSAP animation effects
   useEffect(() => {
     const fetchMemories = async () => {
       if (!user) return;
@@ -209,13 +209,13 @@ export default function Dashboard() {
           id: media.id,
           publicId: media.public_id,
           url: media.url,
-          thumbnailUrl: media.url, // You might want to generate a thumbnail URL
+          thumbnailUrl: media.url,
           type: media.type,
           title: media.caption || media.url.split("/").pop(),
           createdAt: media.created_at,
           tags: media.tags || [],
           emotion: media.emotion || "neutral",
-          isPublic: media.is_public || false, // Add isPublic field from database
+          isPublic: media.is_public || false,
         }));
 
         setMemories(transformedMemories);
@@ -236,7 +236,7 @@ export default function Dashboard() {
       id: media.id,
       publicId: media.publicId,
       url: media.url,
-      thumbnailUrl: media.thumbnailUrl || media.url, // Use thumbnailUrl if available, fallback to url
+      thumbnailUrl: media.thumbnailUrl || media.url,
       type: media.type,
       title: media.caption || media.originalFilename,
       note: media.note || "",
@@ -244,7 +244,7 @@ export default function Dashboard() {
       tags: media.tags || [],
       emotion: media.emotion || "neutral",
       favourite: media.favourite || false,
-      isPublic: media.is_public || false, // Add isPublic field for new uploads
+      isPublic: media.is_public || false,
     }));
 
     setMemories((prev) => [...newMemories, ...prev]);
@@ -265,74 +265,36 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Initialize animations
-  useEffect(() => {
-    if (pageRef.current) {
-      pageEnter(pageRef.current);
-    }
-  }, []);
-
-  // Animate filter panel
-  useEffect(() => {
-    if (filterPanelRef.current) {
-      if (isFilterOpen) {
-        filterEnter(filterPanelRef.current);
-      } else {
-        filterExit(filterPanelRef.current);
-      }
-    }
-  }, [isFilterOpen]);
-
-  // Animate header
-  useEffect(() => {
-    if (headerRef.current) {
-      gsap.fromTo(
-        headerRef.current.children,
-        { y: -20, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.5,
-          stagger: 0.1,
-          ease: "power2.out",
-        }
-      );
-    }
-  }, []);
-
-  // Animate upload modal
-  useEffect(() => {
-    if (isUploadModalOpen && uploadModalRef.current) {
-      modalEnter(uploadModalRef.current);
-    }
-  }, [isUploadModalOpen]);
-
   const handleCloseUploadModal = () => {
-    if (uploadModalRef.current) {
-      modalExit(uploadModalRef.current).then(() => {
-        setIsUploadModalOpen(false);
-      });
-    } else {
-      setIsUploadModalOpen(false);
-    }
+    setIsUploadModalOpen(false);
   };
 
   return (
-    <div ref={pageRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <motion.div
+      ref={pageRef}
+      variants={pageVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+    >
       {/* Header with welcome message */}
-      <div
+      <motion.div
         ref={headerRef}
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
         className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8"
       >
-        <div>
+        <motion.div variants={staggerItem}>
           <h1 className="text-3xl font-bold text-gray-900">
             Welcome, {user?.firstName || "Friend"}!
           </h1>
           <p className="text-gray-600">Your personal memory gallery</p>
-        </div>
+        </motion.div>
 
         {memories.length > 0 && (
-          <div className="mt-4 sm:mt-0">
+          <motion.div variants={staggerItem} className="mt-4 sm:mt-0">
             <button
               onClick={() => setIsUploadModalOpen(true)}
               className="btn-primary flex items-center"
@@ -340,9 +302,9 @@ export default function Dashboard() {
               <Plus size={18} className="mr-1" />
               Add Memories
             </button>
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {/* Filters and view toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
@@ -363,169 +325,185 @@ export default function Dashboard() {
               />
             </button>
 
-            {isFilterOpen && (
-              <div
-                ref={filterPanelRef}
-                className="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10"
-              >
-                <div className="space-y-4">
-                  {/* Media Type Filter */}
-                  <div>
-                    <h3 className="font-medium mb-2">Media Type</h3>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleFilterChange("mediaType", "image")}
-                        className={cn(
-                          "px-3 py-1.5 rounded-md text-sm flex items-center",
-                          filters.mediaType === "image"
-                            ? "bg-primary-100 text-primary-700"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        )}
-                      >
-                        <ImageIcon size={16} className="mr-1.5" />
-                        Images
-                      </button>
-                      <button
-                        onClick={() => handleFilterChange("mediaType", "video")}
-                        className={cn(
-                          "px-3 py-1.5 rounded-md text-sm flex items-center",
-                          filters.mediaType === "video"
-                            ? "bg-primary-100 text-primary-700"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        )}
-                      >
-                        <Video size={16} className="mr-1.5" />
-                        Videos
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Emotions Filter */}
-                  <div>
-                    <h3 className="font-medium mb-2">Emotions</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {uniqueEmotions.map((emotion) => (
+            <AnimatePresence>
+              {isFilterOpen && (
+                <motion.div
+                  ref={filterPanelRef}
+                  variants={filterVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  className="absolute top-full left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-10"
+                >
+                  <div className="space-y-4">
+                    {/* Media Type Filter */}
+                    <div>
+                      <h3 className="font-medium mb-2">Media Type</h3>
+                      <div className="flex gap-2">
                         <button
-                          key={emotion}
-                          onClick={() => handleFilterChange("emotion", emotion)}
+                          onClick={() =>
+                            handleFilterChange("mediaType", "image")
+                          }
                           className={cn(
-                            "px-2 py-1 rounded-full text-sm",
-                            filters.emotion === emotion
+                            "px-3 py-1.5 rounded-md text-sm flex items-center",
+                            filters.mediaType === "image"
                               ? "bg-primary-100 text-primary-700"
                               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                           )}
                         >
-                          {emotion}
+                          <ImageIcon size={16} className="mr-1.5" />
+                          Images
                         </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tags Filter */}
-                  <div>
-                    <h3 className="font-medium mb-2">Tags</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {uniqueTags.map((tag) => (
                         <button
-                          key={tag}
-                          onClick={() => handleFilterChange("tags", tag)}
+                          onClick={() =>
+                            handleFilterChange("mediaType", "video")
+                          }
                           className={cn(
-                            "px-2 py-1 rounded-full text-sm",
-                            filters.tags.includes(tag)
+                            "px-3 py-1.5 rounded-md text-sm flex items-center",
+                            filters.mediaType === "video"
                               ? "bg-primary-100 text-primary-700"
                               : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                           )}
                         >
-                          {tag}
+                          <Video size={16} className="mr-1.5" />
+                          Videos
                         </button>
-                      ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Date Range Filter */}
-                  <div>
-                    <h3 className="font-medium mb-2">Date Range</h3>
-                    <div className="space-y-2">
-                      <input
-                        type="date"
-                        value={filters.dateRange.start || ""}
-                        onChange={(e) =>
-                          handleFilterChange("dateRange", {
-                            start: e.target.value,
-                          })
-                        }
-                        className="w-full px-2 py-1 border rounded"
-                      />
-                      <input
-                        type="date"
-                        value={filters.dateRange.end || ""}
-                        onChange={(e) =>
-                          handleFilterChange("dateRange", {
-                            end: e.target.value,
-                          })
-                        }
-                        className="w-full px-2 py-1 border rounded"
-                      />
+                    {/* Emotions Filter */}
+                    <div>
+                      <h3 className="font-medium mb-2">Emotions</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {uniqueEmotions.map((emotion) => (
+                          <button
+                            key={emotion}
+                            onClick={() =>
+                              handleFilterChange("emotion", emotion)
+                            }
+                            className={cn(
+                              "px-2 py-1 rounded-full text-sm",
+                              filters.emotion === emotion
+                                ? "bg-primary-100 text-primary-700"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            )}
+                          >
+                            {emotion}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Privacy Filter */}
-                  <div>
-                    <h3 className="font-medium mb-2">Privacy</h3>
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => handleFilterChange("privacy", "all")}
-                        className={cn(
-                          "px-2 py-1 rounded-full text-sm",
-                          filters.privacy === "all"
-                            ? "bg-primary-100 text-primary-700"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        )}
-                      >
-                        All
-                      </button>
-                      <button
-                        onClick={() => handleFilterChange("privacy", "public")}
-                        className={cn(
-                          "px-2 py-1 rounded-full text-sm",
-                          filters.privacy === "public"
-                            ? "bg-primary-100 text-primary-700"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        )}
-                      >
-                        Public
-                      </button>
-                      <button
-                        onClick={() => handleFilterChange("privacy", "private")}
-                        className={cn(
-                          "px-2 py-1 rounded-full text-sm",
-                          filters.privacy === "private"
-                            ? "bg-primary-100 text-primary-700"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                        )}
-                      >
-                        Private
-                      </button>
+                    {/* Tags Filter */}
+                    <div>
+                      <h3 className="font-medium mb-2">Tags</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {uniqueTags.map((tag) => (
+                          <button
+                            key={tag}
+                            onClick={() => handleFilterChange("tags", tag)}
+                            className={cn(
+                              "px-2 py-1 rounded-full text-sm",
+                              filters.tags.includes(tag)
+                                ? "bg-primary-100 text-primary-700"
+                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            )}
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Clear Filters */}
-                  {(filters.emotion ||
-                    filters.tags.length > 0 ||
-                    filters.dateRange.start ||
-                    filters.dateRange.end ||
-                    filters.mediaType !== "all" ||
-                    filters.privacy !== "all") && (
-                    <button
-                      onClick={clearFilters}
-                      className="w-full btn-outline text-sm"
-                    >
-                      Clear Filters
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
+                    {/* Date Range Filter */}
+                    <div>
+                      <h3 className="font-medium mb-2">Date Range</h3>
+                      <div className="space-y-2">
+                        <input
+                          type="date"
+                          value={filters.dateRange.start || ""}
+                          onChange={(e) =>
+                            handleFilterChange("dateRange", {
+                              start: e.target.value,
+                            })
+                          }
+                          className="w-full px-2 py-1 border rounded"
+                        />
+                        <input
+                          type="date"
+                          value={filters.dateRange.end || ""}
+                          onChange={(e) =>
+                            handleFilterChange("dateRange", {
+                              end: e.target.value,
+                            })
+                          }
+                          className="w-full px-2 py-1 border rounded"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Privacy Filter */}
+                    <div>
+                      <h3 className="font-medium mb-2">Privacy</h3>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleFilterChange("privacy", "all")}
+                          className={cn(
+                            "px-2 py-1 rounded-full text-sm",
+                            filters.privacy === "all"
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          )}
+                        >
+                          All
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleFilterChange("privacy", "public")
+                          }
+                          className={cn(
+                            "px-2 py-1 rounded-full text-sm",
+                            filters.privacy === "public"
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          )}
+                        >
+                          Public
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleFilterChange("privacy", "private")
+                          }
+                          className={cn(
+                            "px-2 py-1 rounded-full text-sm",
+                            filters.privacy === "private"
+                              ? "bg-primary-100 text-primary-700"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          )}
+                        >
+                          Private
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Clear Filters */}
+                    {(filters.emotion ||
+                      filters.tags.length > 0 ||
+                      filters.dateRange.start ||
+                      filters.dateRange.end ||
+                      filters.mediaType !== "all" ||
+                      filters.privacy !== "all") && (
+                      <button
+                        onClick={clearFilters}
+                        className="w-full btn-outline text-sm"
+                      >
+                        Clear Filters
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Active Filters Count */}
@@ -624,33 +602,39 @@ export default function Dashboard() {
       )}
 
       {/* Upload Modal */}
-      {isUploadModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <AnimatePresence>
+        {isUploadModalOpen && (
           <motion.div
-            ref={uploadModalRef}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            variants={overlayVariants}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           >
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Upload Memories
-                </h2>
-                <button
-                  onClick={handleCloseUploadModal}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <X size={24} />
-                </button>
-              </div>
+            <motion.div
+              ref={uploadModalRef}
+              variants={modalVariants}
+              className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Upload Memories
+                  </h2>
+                  <button
+                    onClick={handleCloseUploadModal}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
 
-              <MediaUploader onUploadComplete={handleUploadComplete} />
-            </div>
+                <MediaUploader onUploadComplete={handleUploadComplete} />
+              </div>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
-    </div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

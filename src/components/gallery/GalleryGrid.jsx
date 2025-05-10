@@ -14,7 +14,6 @@ import {
 import { format } from "date-fns";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
-import { gridItemEnter } from "../../lib/animations";
 
 export default function GalleryGrid({ memories, viewMode = "grid" }) {
   const navigate = useNavigate();
@@ -52,15 +51,6 @@ export default function GalleryGrid({ memories, viewMode = "grid" }) {
       fetchFavorites();
     }
   }, [memories]);
-
-  useEffect(() => {
-    if (gridRef.current) {
-      const items = gridRef.current.children;
-      Array.from(items).forEach((item, index) => {
-        gridItemEnter(item, index);
-      });
-    }
-  }, [memories, viewMode]);
 
   const breakpointColumns = {
     default: 4,

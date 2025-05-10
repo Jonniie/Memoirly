@@ -1,122 +1,100 @@
-import { gsap } from "gsap";
+// Framer Motion animation variants
 
 // Fade in animation
-export const fadeIn = (element, duration = 0.5) => {
-  return gsap.fromTo(
-    element,
-    { opacity: 0 },
-    { opacity: 1, duration, ease: "power2.out" }
-  );
+export const fadeIn = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.5, ease: "easeOut" },
 };
 
 // Slide in from bottom
-export const slideUp = (element, duration = 0.5) => {
-  return gsap.fromTo(
-    element,
-    { y: 50, opacity: 0 },
-    { y: 0, opacity: 1, duration, ease: "power2.out" }
-  );
+export const slideUp = {
+  initial: { y: 50, opacity: 0 },
+  animate: { y: 0, opacity: 1 },
+  exit: { y: 50, opacity: 0 },
+  transition: { duration: 0.5, ease: "easeOut" },
 };
 
 // Slide in from right
-export const slideInRight = (element, duration = 0.5) => {
-  return gsap.fromTo(
-    element,
-    { x: 50, opacity: 0 },
-    { x: 0, opacity: 1, duration, ease: "power2.out" }
-  );
+export const slideInRight = {
+  initial: { x: 50, opacity: 0 },
+  animate: { x: 0, opacity: 1 },
+  exit: { x: 50, opacity: 0 },
+  transition: { duration: 0.5, ease: "easeOut" },
 };
 
 // Scale up animation
-export const scaleUp = (element, duration = 0.5) => {
-  return gsap.fromTo(
-    element,
-    { scale: 0.9, opacity: 0 },
-    { scale: 1, opacity: 1, duration, ease: "back.out(1.7)" }
-  );
+export const scaleUp = {
+  initial: { scale: 0.9, opacity: 0 },
+  animate: { scale: 1, opacity: 1 },
+  exit: { scale: 0.9, opacity: 0 },
+  transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
 };
 
 // Stagger children animation
-export const staggerChildren = (parent, children, duration = 0.5) => {
-  return gsap.fromTo(
-    children,
-    { y: 20, opacity: 0 },
-    {
-      y: 0,
-      opacity: 1,
-      duration,
-      stagger: 0.1,
-      ease: "power2.out",
-    }
-  );
+export const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+export const staggerItem = {
+  initial: { y: 20, opacity: 0 },
+  animate: { y: 0, opacity: 1 },
+  exit: { y: 20, opacity: 0 },
+  transition: { duration: 0.5, ease: "easeOut" },
 };
 
 // Modal animations
-export const modalEnter = (element, duration = 0.3) => {
-  return gsap.fromTo(
-    element,
-    { scale: 0.9, opacity: 0 },
-    { scale: 1, opacity: 1, duration, ease: "back.out(1.7)" }
-  );
-};
-
-export const modalExit = (element, duration = 0.3) => {
-  return gsap.to(element, {
-    scale: 0.9,
-    opacity: 0,
-    duration,
-    ease: "power2.in",
-  });
+export const modalVariants = {
+  initial: { scale: 0.9, opacity: 0 },
+  animate: { scale: 1, opacity: 1 },
+  exit: { scale: 0.9, opacity: 0 },
+  transition: { duration: 0.3, ease: [0.4, 0, 0.2, 1] },
 };
 
 // Page transition animations
-export const pageEnter = (element, duration = 0.5) => {
-  return gsap.fromTo(
-    element,
-    { opacity: 0, y: 20 },
-    { opacity: 1, y: 0, duration, ease: "power2.out" }
-  );
-};
-
-export const pageExit = (element, duration = 0.5) => {
-  return gsap.to(element, {
-    opacity: 0,
-    y: -20,
-    duration,
-    ease: "power2.in",
-  });
+export const pageVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+  transition: { duration: 0.5, ease: "easeOut" },
 };
 
 // Grid item animations
-export const gridItemEnter = (element, index, duration = 0.5) => {
-  return gsap.fromTo(
-    element,
-    { scale: 0.8, opacity: 0, y: 20 },
-    {
-      scale: 1,
-      opacity: 1,
-      y: 0,
-      duration,
-      delay: index * 0.1,
-      ease: "back.out(1.7)",
-    }
-  );
+export const gridItemVariants = {
+  initial: { scale: 0.8, opacity: 0, y: 20 },
+  animate: { scale: 1, opacity: 1, y: 0 },
+  exit: { scale: 0.8, opacity: 0, y: 20 },
+  transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] },
 };
 
 // Filter animations
-export const filterEnter = (element, duration = 0.3) => {
-  return gsap.fromTo(
-    element,
-    { height: 0, opacity: 0 },
-    { height: "auto", opacity: 1, duration, ease: "power2.out" }
-  );
+export const filterVariants = {
+  initial: { height: 0, opacity: 0 },
+  animate: { height: "auto", opacity: 1 },
+  exit: { height: 0, opacity: 0 },
+  transition: { duration: 0.3, ease: "easeOut" },
 };
 
-export const filterExit = (element, duration = 0.3) => {
-  return gsap.to(element, {
-    height: 0,
-    opacity: 0,
-    duration,
-    ease: "power2.in",
-  });
+// Overlay animations
+export const overlayVariants = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: { duration: 0.3 },
+};
+
+// Button hover animations
+export const buttonHover = {
+  scale: 1.02,
+  transition: { duration: 0.2 },
+};
+
+export const buttonTap = {
+  scale: 0.98,
+  transition: { duration: 0.1 },
 };

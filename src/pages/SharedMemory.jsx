@@ -59,7 +59,7 @@ export default function SharedMemory() {
   }, [id]);
 
   const handleGoBack = () => {
-    navigate(-1);
+    navigate("/");
   };
 
   if (isLoading) {

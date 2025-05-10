@@ -19,15 +19,8 @@ import {
   Unlock,
 } from "lucide-react";
 import { format } from "date-fns";
-import { gsap } from "gsap";
 import { supabase } from "../lib/supabase";
 import { cn } from "../lib/utils";
-import {
-  pageEnter,
-  slideInRight,
-  modalEnter,
-  modalExit,
-} from "../lib/animations";
 
 // Animation variants
 const pageVariants = {
@@ -173,32 +166,6 @@ export default function MemoryDetail() {
     fetchMemory();
   }, [id]);
 
-  // Initialize animations
-  useEffect(() => {
-    if (pageRef.current) {
-      pageEnter(pageRef.current);
-    }
-  }, []);
-
-  // Animate media and details sections
-  useEffect(() => {
-    if (mediaRef.current && detailsRef.current) {
-      gsap.fromTo(
-        mediaRef.current,
-        { opacity: 0, scale: 0.95 },
-        { opacity: 1, scale: 1, duration: 0.5, ease: "power2.out" }
-      );
-      slideInRight(detailsRef.current);
-    }
-  }, [memory]);
-
-  // Animate share modal
-  useEffect(() => {
-    if (showShareConfirm && shareModalRef.current) {
-      modalEnter(shareModalRef.current);
-    }
-  }, [showShareConfirm]);
-
   const handleGoBack = () => {
     navigate(-1);
   };
@@ -242,25 +209,12 @@ export default function MemoryDetail() {
   };
 
   const handleTagsChange = (e) => {
-    // Just store the raw input value
-    setEditedMemory((prev) => ({
-      ...prev,
-      tagsInput: e.target.value,
-      tags: prev.tags, // Keep existing processed tags
-    }));
-  };
-
-  const processTags = () => {
-    const tagsString = editedMemory.tagsInput;
+    const tagsString = e.target.value;
     const tagsArray = tagsString
-      .split(/[,\s]+/)
+      .split(",")
       .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0);
-
-    setEditedMemory((prev) => ({
-      ...prev,
-      tags: tagsArray,
-    }));
+      .filter(Boolean);
+    setEditedMemory((prev) => ({ ...prev, tags: tagsArray }));
   };
 
   const handleToggleFavorite = async () => {
@@ -460,15 +414,8 @@ export default function MemoryDetail() {
   };
 
   const handleCancelShare = () => {
-    if (shareModalRef.current) {
-      modalExit(shareModalRef.current).then(() => {
-        setShowShareConfirm(false);
-        setIsSharing(false);
-      });
-    } else {
-      setShowShareConfirm(false);
-      setIsSharing(false);
-    }
+    setShowShareConfirm(false);
+    setIsSharing(false);
   };
 
   if (isLoading) {
@@ -658,14 +605,10 @@ export default function MemoryDetail() {
                     type="text"
                     id="tags"
                     name="tags"
-                    value={
-                      editedMemory.tagsInput || editedMemory.tags.join(", ")
-                    }
+                    value={editedMemory.tags.join(", ")}
                     onChange={handleTagsChange}
-                    onBlur={processTags}
                     className="input"
                     disabled={isSaving}
-                    placeholder="Add tags (separated by commas or spaces)"
                   />
                 </div>
 
@@ -709,7 +652,7 @@ export default function MemoryDetail() {
                   <h1 className="text-2xl font-bold text-gray-900">
                     {memory.title}
                   </h1>
-                  <div className="flex items-center space-x-2 flex-wrap sm:flex-nowrap gap-4">
+                  <div className="flex items-center space-x-2 flex-wrap gap-4 sm:gap-2">
                     <button
                       onClick={handleTogglePublic}
                       disabled={isTogglingPublic}
