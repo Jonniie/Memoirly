@@ -17,6 +17,10 @@ import {
   Check,
   Lock,
   Unlock,
+  Maximize2,
+  X,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "../lib/supabase";
@@ -118,6 +122,11 @@ export default function MemoryDetail() {
   const [showShareConfirm, setShowShareConfirm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
   const pageRef = useRef(null);
   const mediaRef = useRef(null);
   const detailsRef = useRef(null);
@@ -167,6 +176,19 @@ export default function MemoryDetail() {
 
     fetchMemory();
   }, [id]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && isFullScreen) {
+        setIsFullScreen(false);
+        setScale(1);
+        setPosition({ x: 0, y: 0 });
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullScreen]);
 
   const handleGoBack = () => {
     navigate(-1);
@@ -469,6 +491,36 @@ export default function MemoryDetail() {
     }
   };
 
+  const handleZoom = (direction) => {
+    setScale((prev) => {
+      const newScale = direction === "in" ? prev * 1.2 : prev / 1.2;
+      return Math.min(Math.max(newScale, 1), 4); // Limit zoom between 1x and 4x
+    });
+  };
+
+  const handleMouseDown = (e) => {
+    if (scale > 1) {
+      setIsDragging(true);
+      dragStart.current = {
+        x: e.clientX - position.x,
+        y: e.clientY - position.y,
+      };
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (isDragging && scale > 1) {
+      setPosition({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y,
+      });
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -561,6 +613,12 @@ export default function MemoryDetail() {
                   style={{ maxHeight: "80vh" }}
                 />
               )}
+              <button
+                onClick={() => setIsFullScreen(true)}
+                className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              >
+                <Maximize2 size={20} />
+              </button>
             </div>
           </motion.div>
 
@@ -952,7 +1010,7 @@ export default function MemoryDetail() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleDelete}
-                  className="btn-error"
+                  className="btn-error flex items-center"
                   disabled={isDeleting}
                 >
                   {isDeleting ? (
@@ -969,6 +1027,66 @@ export default function MemoryDetail() {
                 </motion.button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Full Screen Modal */}
+      <AnimatePresence>
+        {isFullScreen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black z-50 flex items-center justify-center"
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+          >
+            <button
+              onClick={() => setIsFullScreen(false)}
+              className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <div className="absolute top-4 left-4 flex gap-2">
+              <button
+                onClick={() => handleZoom("in")}
+                className="p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              >
+                <ZoomIn size={20} />
+              </button>
+              <button
+                onClick={() => handleZoom("out")}
+                className="p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
+              >
+                <ZoomOut size={20} />
+              </button>
+            </div>
+            <div
+              className="cursor-move"
+              onMouseDown={handleMouseDown}
+              style={{
+                transform: `scale(${scale}) translate(${position.x}px, ${position.y}px)`,
+                transition: isDragging ? "none" : "transform 0.1s ease-out",
+              }}
+            >
+              {memory.type === "image" ? (
+                <img
+                  src={memory.url}
+                  alt={memory.title}
+                  className="max-h-[90vh] max-w-[90vw] object-contain"
+                  draggable={false}
+                />
+              ) : (
+                <video
+                  src={memory.url}
+                  controls
+                  className="max-h-[90vh] max-w-[90vw]"
+                  autoPlay
+                />
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

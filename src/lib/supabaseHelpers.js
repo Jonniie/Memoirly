@@ -3,14 +3,19 @@ import { supabase } from "./supabase";
 
 ///// ─── ALBUM HELPERS ────────────────────────────
 
-export const createAlbum = async (userId, title) => {
-  const { data, error } = await supabase.from("albums").insert([
-    {
-      user_id: userId,
-      title: title,
-      created_at: new Date().toISOString(),
-    },
-  ]);
+export const createAlbum = async (userId, title, description = null) => {
+  const { data, error } = await supabase
+    .from("albums")
+    .insert([
+      {
+        user_id: userId,
+        title: title,
+        description: description,
+        created_at: new Date().toISOString(),
+      },
+    ])
+    .select()
+    .single();
   if (error) throw error;
   return data;
 };
@@ -182,6 +187,127 @@ export const deleteMedia = async (mediaId) => {
 
   if (error) {
     console.error("Error deleting media:", error);
+    throw error;
+  }
+};
+
+/**
+ * Add media to an album
+ * @param {string} albumId - The ID of the album
+ * @param {string} mediaId - The ID of the media to add
+ * @returns {Promise<Object>} The created album-media relationship
+ */
+export const addMediaToAlbum = async (albumId, mediaId) => {
+  const { data, error } = await supabase
+    .from("album_media")
+    .insert([
+      {
+        album_id: albumId,
+        media_id: mediaId,
+        added_at: new Date().toISOString(),
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Error adding media to album:", error);
+    throw error;
+  }
+
+  return data;
+};
+
+/**
+ * Remove media from an album
+ * @param {string} albumId - The ID of the album
+ * @param {string} mediaId - The ID of the media to remove
+ * @returns {Promise<void>}
+ */
+export const removeMediaFromAlbum = async (albumId, mediaId) => {
+  const { error } = await supabase
+    .from("album_media")
+    .delete()
+    .eq("album_id", albumId)
+    .eq("media_id", mediaId);
+
+  if (error) {
+    console.error("Error removing media from album:", error);
+    throw error;
+  }
+};
+
+/**
+ * Get all media in an album
+ * @param {string} albumId - The ID of the album
+ * @returns {Promise<Array>} Array of media items in the album
+ */
+export const getAlbumMedia = async (albumId) => {
+  const { data, error } = await supabase
+    .from("album_media")
+    .select(
+      `
+      media_id,
+      media:media_id (
+        id,
+        url,
+        type,
+        caption,
+        note,
+        emotion,
+        tags,
+        favourite,
+        created_at
+      )
+    `
+    )
+    .eq("album_id", albumId)
+    .order("added_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching album media:", error);
+    throw error;
+  }
+
+  return data.map((item) => item.media);
+};
+
+/**
+ * Upload a file to Supabase Storage
+ * @param {File} file - The file to upload
+ * @param {string} userId - The user's ID
+ * @returns {Promise<string>} The public URL of the uploaded file
+ */
+export const uploadFileToStorage = async (file, userId) => {
+  try {
+    // Create a unique file name using timestamp and random string
+    const fileExt = file.name.split(".").pop();
+    const fileName = `${userId}/${Date.now()}-${Math.random()
+      .toString(36)
+      .substring(2)}.${fileExt}`;
+    const filePath = `media/${fileName}`;
+
+    // Upload the file to Supabase Storage
+    const { data, error } = await supabase.storage
+      .from("media")
+      .upload(filePath, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+
+    if (error) {
+      console.error("Error uploading file:", error);
+      throw error;
+    }
+
+    // Get the public URL for the uploaded file
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from("media").getPublicUrl(filePath);
+
+    return publicUrl;
+  } catch (error) {
+    console.error("Error in uploadFileToStorage:", error);
     throw error;
   }
 };
