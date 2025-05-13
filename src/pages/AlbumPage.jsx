@@ -338,7 +338,11 @@ export default function AlbumPage() {
             </div>
           )}
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() =>
+              currentAlbum
+                ? setIsAddMediaModalOpen(true)
+                : setIsCreateModalOpen(true)
+            }
             className="btn-primary flex items-center"
           >
             <Plus size={18} className="mr-1" />

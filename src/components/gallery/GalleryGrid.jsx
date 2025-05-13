@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Link, useNavigate } from "react-router-dom";
 import Masonry from "react-masonry-css";
 import {
@@ -10,15 +10,24 @@ import {
   Loader2,
   Image as ImageIcon,
   Video,
+  Trash2,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "../../lib/utils";
 import { supabase } from "../../lib/supabase";
 
-export default function GalleryGrid({ memories, viewMode = "grid" }) {
+export default function GalleryGrid({
+  memories,
+  viewMode = "grid",
+  onRemoveMedia,
+}) {
   const navigate = useNavigate();
   const [favoritingId, setFavoritingId] = useState(null);
   const [favorites, setFavorites] = useState({});
+  const [removingId, setRemovingId] = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [mediaToDelete, setMediaToDelete] = useState(null);
   const gridRef = useRef(null);
 
   // Fetch favorite status for all memories
@@ -88,6 +97,30 @@ export default function GalleryGrid({ memories, viewMode = "grid" }) {
     }
   };
 
+  const handleRemoveMedia = async (e, memory) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!onRemoveMedia) return;
+
+    setMediaToDelete(memory);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!mediaToDelete || !onRemoveMedia) return;
+
+    try {
+      setRemovingId(mediaToDelete.id);
+      await onRemoveMedia(mediaToDelete.id);
+      setShowDeleteConfirm(false);
+      setMediaToDelete(null);
+    } catch (err) {
+      console.error("Error removing media:", err);
+    } finally {
+      setRemovingId(null);
+    }
+  };
+
   const renderMemoryCard = (memory) => (
     <motion.div
       key={memory.id}
@@ -127,26 +160,44 @@ export default function GalleryGrid({ memories, viewMode = "grid" }) {
           )}
         </div>
 
-        {/* Favorite Button */}
-        <button
-          onClick={(e) => handleToggleFavorite(e, memory)}
-          disabled={favoritingId === memory.id}
-          className={cn(
-            "absolute top-2 right-2 p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors",
-            favorites[memory.id]
-              ? "text-primary-600"
-              : "text-gray-600 hover:text-primary-600"
+        {/* Action Buttons */}
+        <div className="absolute top-2 right-2 flex gap-2 z-50">
+          {/* Favorite Button */}
+          <button
+            onClick={(e) => handleToggleFavorite(e, memory)}
+            disabled={favoritingId === memory.id}
+            className={cn(
+              "p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors",
+              favorites[memory.id]
+                ? "text-primary-600"
+                : "text-gray-600 hover:text-primary-600"
+            )}
+          >
+            {favoritingId === memory.id ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <Heart
+                size={18}
+                className={cn(favorites[memory.id] && "fill-current")}
+              />
+            )}
+          </button>
+
+          {/* Remove Button - Only show if onRemoveMedia is provided */}
+          {onRemoveMedia && (
+            <button
+              onClick={(e) => handleRemoveMedia(e, memory)}
+              disabled={removingId === memory.id}
+              className="p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors text-gray-600 hover:text-red-600"
+            >
+              {removingId === memory.id ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Trash2 size={18} />
+              )}
+            </button>
           )}
-        >
-          {favoritingId === memory.id ? (
-            <Loader2 size={18} className="animate-spin" />
-          ) : (
-            <Heart
-              size={18}
-              className={cn(favorites[memory.id] && "fill-current")}
-            />
-          )}
-        </button>
+        </div>
 
         {/* Memory Info */}
         <div
@@ -203,19 +254,157 @@ export default function GalleryGrid({ memories, viewMode = "grid" }) {
 
   if (viewMode === "list") {
     return (
-      <div ref={gridRef} className="space-y-4">
-        {memories.map(renderMemoryCard)}
-      </div>
+      <>
+        <div ref={gridRef} className="space-y-4">
+          {memories.map(renderMemoryCard)}
+        </div>
+
+        {/* Delete Confirmation Modal */}
+        <AnimatePresence>
+          {showDeleteConfirm && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+              >
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Remove Media?
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setMediaToDelete(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Are you sure you want to remove this media from the album?
+                  This action cannot be undone.
+                </p>
+                <div className="flex justify-end space-x-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setMediaToDelete(null);
+                    }}
+                    className="btn-outline"
+                    disabled={removingId === mediaToDelete?.id}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="btn-error flex items-center"
+                    disabled={removingId === mediaToDelete?.id}
+                  >
+                    {removingId === mediaToDelete?.id ? (
+                      <>
+                        <Loader2 size={16} className="mr-1 animate-spin" />
+                        Removing...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 size={16} className="mr-1" />
+                        Remove
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
     );
   }
 
   return (
-    <Masonry
-      breakpointCols={breakpointColumns}
-      className="flex -ml-4 w-auto"
-      columnClassName="pl-4 bg-clip-padding"
-    >
-      {memories.map(renderMemoryCard)}
-    </Masonry>
+    <>
+      <Masonry
+        breakpointCols={breakpointColumns}
+        className="flex -ml-4 w-auto"
+        columnClassName="pl-4 bg-clip-padding"
+      >
+        {memories.map(renderMemoryCard)}
+      </Masonry>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Remove Media?
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setMediaToDelete(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to remove this media from the album? This
+                action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setMediaToDelete(null);
+                  }}
+                  className="btn-outline"
+                  disabled={removingId === mediaToDelete?.id}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="btn-error flex items-center"
+                  disabled={removingId === mediaToDelete?.id}
+                >
+                  {removingId === mediaToDelete?.id ? (
+                    <>
+                      <Loader2 size={16} className="mr-1 animate-spin" />
+                      Removing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} className="mr-1" />
+                      Remove
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

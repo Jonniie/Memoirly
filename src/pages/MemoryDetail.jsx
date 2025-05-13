@@ -965,7 +965,6 @@ export default function MemoryDetail() {
                       ) : (
                         <Lock size={16} className="mr-1" />
                       )}
-                      Make Private
                     </motion.button>
                   </>
                 )}
