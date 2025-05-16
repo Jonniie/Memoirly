@@ -22,8 +22,7 @@ export default function SharedMemory() {
           .from("media")
           .select("*")
           .eq("id", id)
-          .eq("is_public", true)
-          .single();
+          .eq("is_public", true);
 
         if (error) throw error;
 

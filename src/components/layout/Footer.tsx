@@ -1,4 +1,3 @@
-import { Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 
 export default function Footer() {
@@ -14,9 +13,7 @@ export default function Footer() {
             </Link>
           </div>
 
-          <div className="flex items-center space-x-1 text-sm text-gray-500">
-            <span>Made with</span>
-            <Heart size={14} className="text-error-500 fill-error-500" />
+          <div className="flex items-center space-x-1 text-sm ">
             <span>&copy; {currentYear} Memoirly</span>
           </div>
         </div>

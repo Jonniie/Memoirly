@@ -15,7 +15,12 @@ if (!rootElement) throw new Error("Failed to find the root element");
 createRoot(rootElement).render(
   <StrictMode>
     <ClerkProvider publishableKey={clerkPubKey}>
-      <Router>
+      <Router
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <App />
       </Router>
     </ClerkProvider>

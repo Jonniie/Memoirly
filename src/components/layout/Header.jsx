@@ -10,6 +10,7 @@ const navigation = [
   { name: "Gallery", href: "/dashboard" },
   { name: "Albums", href: "/albums" },
   { name: "Timeline", href: "/timeline" },
+  { name: "Edits", href: "/edits" },
 ];
 
 export default function Header() {

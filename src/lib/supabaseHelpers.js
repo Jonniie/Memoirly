@@ -14,8 +14,7 @@ export const createAlbum = async (userId, title, description = null) => {
         created_at: new Date().toISOString(),
       },
     ])
-    .select()
-    .single();
+    .select();
   if (error) throw error;
   return data;
 };
@@ -92,8 +91,7 @@ export const saveMediaToSupabase = async (mediaData) => {
     .from("media")
     .select("*")
     .eq("url", mediaData.url)
-    .eq("user_id", mediaData.user_id)
-    .single();
+    .eq("user_id", mediaData.user_id);
 
   if (checkError && checkError.code !== "PGRST116") {
     // PGRST116 is "no rows returned" error
@@ -124,8 +122,7 @@ export const saveMediaToSupabase = async (mediaData) => {
         created_at: new Date().toISOString(),
       },
     ])
-    .select()
-    .single();
+    .select();
 
   if (error) {
     console.error("Error saving media to Supabase:", error);
@@ -207,8 +204,7 @@ export const addMediaToAlbum = async (albumId, mediaId) => {
         added_at: new Date().toISOString(),
       },
     ])
-    .select()
-    .single();
+    .select();
 
   if (error) {
     console.error("Error adding media to album:", error);

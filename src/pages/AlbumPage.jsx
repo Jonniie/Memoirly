@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,6 +12,9 @@ import {
   Edit2,
   MoreVertical,
   Share2,
+  Grid,
+  Calendar,
+  Upload,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import GalleryGrid from "../components/gallery/GalleryGrid";
@@ -22,12 +25,13 @@ import {
   updateAlbum,
   deleteAlbum,
   getUserMedia,
-  uploadFileToStorage,
   saveMediaToSupabase,
   addMediaToAlbum,
   removeMediaFromAlbum,
   getAlbumMedia,
 } from "../lib/supabaseHelpers";
+import { uploadToCloudinary } from "../lib/cloudinary";
+import TimelineView from "../components/gallery/TimelineView";
 
 const mockMemories = [];
 
@@ -53,6 +57,10 @@ export default function AlbumPage() {
   const [selectedMedia, setSelectedMedia] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [showAlbumMenu, setShowAlbumMenu] = useState(false);
+  const [viewMode, setViewMode] = useState("grid");
+  const [rotatingCovers, setRotatingCovers] = useState({});
+  const rotationTimersRef = useRef({});
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     fetchAlbums();
@@ -70,6 +78,19 @@ export default function AlbumPage() {
     }
   }, [isAddMediaModalOpen]);
 
+  useEffect(() => {
+    // Only set up rotation if we're on the albums list page
+    if (id || albums.length === 0) return;
+
+    // Clear any existing timers when component unmounts or albums change
+    return () => {
+      Object.values(rotationTimersRef.current).forEach((timer) =>
+        clearInterval(timer)
+      );
+      rotationTimersRef.current = {};
+    };
+  }, [id, albums]);
+
   const fetchAlbums = async () => {
     try {
       setIsLoading(true);
@@ -77,6 +98,24 @@ export default function AlbumPage() {
 
       const data = await getAlbums(userId);
       setAlbums(data || []);
+
+      // For each album, fetch its media to enable cover rotation
+      if (data && data.length > 0) {
+        data.forEach(async (album) => {
+          try {
+            const albumMedia = await getAlbumMedia(album.id);
+            // Only set up rotation for albums with multiple images
+            const imageMedia = albumMedia.filter(
+              (media) => media.type === "image"
+            );
+            if (imageMedia.length > 1) {
+              setupCoverRotation(album.id, imageMedia);
+            }
+          } catch (err) {
+            console.error(`Error fetching media for album ${album.id}:`, err);
+          }
+        });
+      }
     } catch (err) {
       console.error("Error fetching albums:", err);
       setError("Failed to load albums. Please try again.");
@@ -191,14 +230,46 @@ export default function AlbumPage() {
   const handleFileUpload = async (files) => {
     try {
       setIsUploading(true);
-      const uploadPromises = Array.from(files).map(async (file) => {
-        const fileUrl = await uploadFileToStorage(file, userId);
+      setUploadProgress(0);
+      const uploadPromises = Array.from(files).map(async (file, index) => {
+        // Upload to Cloudinary
+        const result = await uploadToCloudinary({
+          file,
+          onProgress: (progress) => {
+            const totalProgress =
+              ((index + progress / 100) / files.length) * 100;
+            setUploadProgress(totalProgress);
+          },
+          tags: ["memories"],
+        });
 
+        // Check if media already exists in Supabase
+        const { data: existingMedia, error: checkError } = await supabase
+          .from("media")
+          .select("*")
+          .eq("url", result.secureUrl)
+          .eq("user_id", userId)
+          .single();
+
+        if (checkError && checkError.code !== "PGRST116") {
+          // PGRST116 is "no rows returned" error
+          console.error("Error checking for existing media:", checkError);
+          throw checkError;
+        }
+
+        // If media already exists, return it
+        if (existingMedia) {
+          console.log("Media already exists, returning existing record");
+          return existingMedia;
+        }
+
+        // If media doesn't exist, create new entry
         const mediaData = {
-          url: fileUrl,
-          type: file.type.startsWith("image/") ? "image" : "video",
+          url: result.secureUrl,
+          type: result.resourceType === "image" ? "image" : "video",
           user_id: userId,
           caption: file.name,
+          public_id: result.publicId,
         };
 
         const savedMedia = await saveMediaToSupabase(mediaData);
@@ -206,13 +277,17 @@ export default function AlbumPage() {
       });
 
       const uploadedMedia = await Promise.all(uploadPromises);
-      setUserMedia((prev) => [...uploadedMedia, ...prev]);
-      setSelectedMedia(uploadedMedia);
+
+      // Filter out any null values and update the UI
+      const validMedia = uploadedMedia.filter((media) => media !== null);
+      setUserMedia((prev) => [...validMedia, ...prev]);
+      setSelectedMedia(validMedia);
     } catch (err) {
       console.error("Error uploading files:", err);
       setError("Failed to upload files. Please try again.");
     } finally {
       setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -250,7 +325,30 @@ export default function AlbumPage() {
     try {
       if (!userId) return;
       const media = await getUserMedia(userId);
-      setUserMedia(media);
+
+      // Get current album media if we're in an album view
+      let albumMedia = [];
+      if (id) {
+        albumMedia = await getAlbumMedia(id);
+      }
+
+      // Filter out media that's already in the album and remove duplicates
+      const uniqueMedia = media.reduce((acc, current) => {
+        // Skip if media is already in the album
+        const isInAlbum = albumMedia.some(
+          (albumMedia) => albumMedia.url === current.url
+        );
+        if (isInAlbum) return acc;
+
+        // Skip if we already have this URL in our accumulator
+        const isDuplicate = acc.some((item) => item.url === current.url);
+        if (isDuplicate) return acc;
+
+        acc.push(current);
+        return acc;
+      }, []);
+
+      setUserMedia(uniqueMedia);
     } catch (err) {
       console.error("Error fetching user media:", err);
       setError("Failed to load your media. Please try again.");
@@ -258,6 +356,82 @@ export default function AlbumPage() {
   };
 
   const currentAlbum = id ? albums.find((album) => album.id === id) : null;
+
+  // Function to set up cover rotation for an album
+  const setupCoverRotation = (albumId, mediaItems) => {
+    if (mediaItems.length <= 1) return;
+
+    // Initialize with the first image or current cover
+    const album = albums.find((a) => a.id === albumId);
+    const initialCover = album?.cover_image || mediaItems[0].url;
+
+    // Set initial state
+    setRotatingCovers((prev) => ({
+      ...prev,
+      [albumId]: {
+        currentUrl: initialCover,
+        mediaIndex: 0,
+        mediaItems: mediaItems.map((item) => ({
+          id: item.id,
+          url: item.url,
+        })),
+      },
+    }));
+
+    // Set up interval to rotate covers every 5 seconds
+    if (rotationTimersRef.current[albumId]) {
+      clearInterval(rotationTimersRef.current[albumId]);
+    }
+
+    rotationTimersRef.current[albumId] = setInterval(() => {
+      setRotatingCovers((prev) => {
+        const albumData = prev[albumId];
+        if (!albumData) return prev;
+
+        const nextIndex =
+          (albumData.mediaIndex + 1) % albumData.mediaItems.length;
+        return {
+          ...prev,
+          [albumId]: {
+            ...albumData,
+            currentUrl: albumData.mediaItems[nextIndex].url,
+            mediaIndex: nextIndex,
+          },
+        };
+      });
+    }, 5000);
+  };
+
+  // Add a function to handle pausing rotation on hover
+  const handleAlbumMouseEnter = (albumId) => {
+    if (rotationTimersRef.current[albumId]) {
+      clearInterval(rotationTimersRef.current[albumId]);
+    }
+  };
+
+  // Add a function to handle resuming rotation on mouse out
+  const handleAlbumMouseLeave = (albumId) => {
+    const albumData = rotatingCovers[albumId];
+    if (!albumData || albumData.mediaItems.length <= 1) return;
+
+    rotationTimersRef.current[albumId] = setInterval(() => {
+      setRotatingCovers((prev) => {
+        const albumData = prev[albumId];
+        if (!albumData) return prev;
+
+        const nextIndex =
+          (albumData.mediaIndex + 1) % albumData.mediaItems.length;
+        return {
+          ...prev,
+          [albumId]: {
+            ...albumData,
+            currentUrl: albumData.mediaItems[nextIndex].url,
+            mediaIndex: nextIndex,
+          },
+        };
+      });
+    }, 5000);
+  };
 
   if (isLoading) {
     return (
@@ -296,46 +470,70 @@ export default function AlbumPage() {
 
         <div className="flex items-center gap-2">
           {currentAlbum && (
-            <div className="relative">
-              <button
-                onClick={() => setShowAlbumMenu(!showAlbumMenu)}
-                className="btn-outline flex items-center"
-              >
-                <MoreVertical size={18} className="mr-1" />
-                Options
-              </button>
+            <>
+              <div className="flex items-center gap-2 mr-2">
+                <button
+                  onClick={() => setViewMode("grid")}
+                  className={`p-2 rounded-md ${
+                    viewMode === "grid"
+                      ? "bg-primary-100 text-primary-600"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <Grid size={20} />
+                </button>
+                <button
+                  onClick={() => setViewMode("timeline")}
+                  className={`p-2 rounded-md ${
+                    viewMode === "timeline"
+                      ? "bg-primary-100 text-primary-600"
+                      : "text-gray-600 hover:bg-gray-100"
+                  }`}
+                >
+                  <Calendar size={20} />
+                </button>
+              </div>
+              <div className="relative">
+                <button
+                  onClick={() => setShowAlbumMenu(!showAlbumMenu)}
+                  className="btn-outline flex items-center"
+                >
+                  <MoreVertical size={18} className="mr-1" />
+                  Options
+                </button>
 
-              {showAlbumMenu && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
-                  <button
-                    onClick={() => {
-                      setSelectedAlbum(currentAlbum);
-                      setFormData({
-                        title: currentAlbum.title,
-                        description: currentAlbum.description || "",
-                      });
-                      setIsEditModalOpen(true);
-                      setShowAlbumMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                  >
-                    <Edit2 size={16} className="mr-2" />
-                    Edit Album
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedAlbum(currentAlbum);
-                      setShowDeleteConfirm(true);
-                      setShowAlbumMenu(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
-                  >
-                    <Trash2 size={16} className="mr-2" />
-                    Delete Album
-                  </button>
-                </div>
-              )}
-            </div>
+                {showAlbumMenu && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                    <button
+                      onClick={() => {
+                        setSelectedAlbum(currentAlbum);
+                        setFormData({
+                          title: currentAlbum.title,
+                          description: currentAlbum.description || "",
+                        });
+                        setIsEditModalOpen(true);
+                        setShowAlbumMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                      <Edit2 size={16} className="mr-2" />
+                      Edit Album
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSelectedAlbum(currentAlbum);
+                        setShowDeleteConfirm(true);
+                        setShowAlbumMenu(false);
+                      }}
+                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100 flex items-center"
+                    >
+                      <Trash2 size={16} className="mr-2" />
+                      Delete Album
+                    </button>
+                  </div>
+                )}
+              </div>
+            </>
           )}
           <button
             onClick={() =>
@@ -359,18 +557,59 @@ export default function AlbumPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
+              onMouseEnter={() => handleAlbumMouseEnter(album.id)}
+              onMouseLeave={() => handleAlbumMouseLeave(album.id)}
             >
               <a href={`/albums/${album.id}`} className="block group">
                 <div className="card card-hover overflow-hidden">
-                  <div className="aspect-w-3 aspect-h-2 bg-gray-200">
-                    {album.cover_image ? (
-                      <img
-                        src={album.cover_image}
-                        alt={album.title}
-                        className="object-cover w-full h-full transition-transform duration-300 group-hover:scale-105"
-                      />
+                  <div className="aspect-w-3 aspect-h-2 bg-gray-200 relative">
+                    {rotatingCovers[album.id]?.currentUrl ||
+                    album.cover_image ? (
+                      <>
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={
+                              rotatingCovers[album.id]?.currentUrl ||
+                              album.cover_image
+                            }
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="w-full h-full "
+                          >
+                            <img
+                              src={
+                                rotatingCovers[album.id]?.currentUrl ||
+                                album.cover_image
+                              }
+                              alt={album.title}
+                              className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </motion.div>
+                        </AnimatePresence>
+                        {/* Rotation indicators - only show if we have rotating covers */}
+                        {rotatingCovers[album.id]?.mediaItems &&
+                          rotatingCovers[album.id].mediaItems.length > 1 && (
+                            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10">
+                              {rotatingCovers[album.id].mediaItems.map(
+                                (item, idx) => (
+                                  <div
+                                    key={item.id}
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      idx ===
+                                      rotatingCovers[album.id].mediaIndex
+                                        ? "bg-white"
+                                        : "bg-white/40"
+                                    } transition-all duration-300`}
+                                  />
+                                )
+                              )}
+                            </div>
+                          )}
+                      </>
                     ) : (
-                      <div className="flex items-center justify-center h-full bg-gray-100">
+                      <div className="flex h-32 md:h-64 items-center justify-center bg-gray-100">
                         <ImageIcon size={48} className="text-gray-400" />
                       </div>
                     )}
@@ -395,10 +634,18 @@ export default function AlbumPage() {
       ) : (
         <div>
           {memories.length > 0 ? (
-            <GalleryGrid
-              memories={memories}
-              onRemoveMedia={handleRemoveMediaFromAlbum}
-            />
+            viewMode === "grid" ? (
+              <GalleryGrid
+                memories={memories}
+                onRemoveMedia={handleRemoveMediaFromAlbum}
+                isAlbumView={true}
+              />
+            ) : (
+              <TimelineView
+                memories={memories}
+                onMemoryClick={(id) => navigate(`/memory/${id}`)}
+              />
+            )
           ) : (
             <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
               <ImageIcon size={48} className="mx-auto text-gray-400 mb-4" />
@@ -636,7 +883,28 @@ export default function AlbumPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Upload New Media
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.classList.add("border-primary-500");
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.classList.remove("border-primary-500");
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.classList.remove("border-primary-500");
+                      const files = e.dataTransfer.files;
+                      if (files.length > 0) {
+                        handleFileUpload(files);
+                      }
+                    }}
+                  >
                     <input
                       type="file"
                       multiple
@@ -645,22 +913,46 @@ export default function AlbumPage() {
                       className="hidden"
                       id="media-upload"
                     />
-                    <label
-                      htmlFor="media-upload"
-                      className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-                    >
-                      {isUploading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <Plus size={16} className="mr-2" />
-                          Choose Files
-                        </>
-                      )}
-                    </label>
+                    <div className="space-y-4">
+                      <div className="flex flex-col items-center">
+                        <Upload size={48} className="text-gray-400 mb-2" />
+                        <p className="text-sm text-gray-600">
+                          Drag and drop your files here, or click to browse
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Supports images and videos
+                        </p>
+                      </div>
+                      <label
+                        htmlFor="media-upload"
+                        className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 transition-colors"
+                      >
+                        {isUploading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Plus size={16} className="mr-2" />
+                            Choose Files
+                          </>
+                        )}
+                      </label>
+                    </div>
+                    {isUploading && (
+                      <div className="mt-4">
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-sm text-gray-600 mt-2">
+                          Uploading... {Math.round(uploadProgress)}%
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

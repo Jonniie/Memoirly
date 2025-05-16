@@ -21,6 +21,7 @@ export default function GalleryGrid({
   memories,
   viewMode = "grid",
   onRemoveMedia,
+  isAlbumView = false,
 }) {
   const navigate = useNavigate();
   const [favoritingId, setFavoritingId] = useState(null);
@@ -139,7 +140,7 @@ export default function GalleryGrid({
         {/* Memory Image/Video */}
         <div
           className={cn(
-            " bg-gray-100",
+            "bg-gray-100 relative",
             viewMode === "list" && "w-48 flex-shrink-0 h-[150px] object"
           )}
         >
@@ -147,10 +148,10 @@ export default function GalleryGrid({
             <img
               src={memory.thumbnailUrl}
               alt={memory.title}
-              className={
-                "object-cover  w-full h-full group-hover:scale-105 transition-transform duration-300" +
-                (viewMode === "list" && " object-top")
-              }
+              className={cn(
+                "object-cover w-full h-full group-hover:scale-105 transition-transform duration-300",
+                viewMode === "list" && "object-top"
+              )}
             />
           ) : (
             <video

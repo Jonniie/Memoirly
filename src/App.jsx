@@ -11,8 +11,10 @@ import Dashboard from "./pages/Dashboard";
 import MemoryDetail from "./pages/MemoryDetail";
 import AlbumPage from "./pages/AlbumPage";
 import TimelinePage from "./pages/TimelinePage";
+import MemoryReelPage from "./pages/MemoryReelPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import SharedMemory from "./pages/SharedMemory";
+import EditsPage from "./pages/EditsPage";
 
 // Components
 import Layout from "./components/layout/Layout";
@@ -67,6 +69,30 @@ function App() {
             element={
               <ProtectedRoute>
                 <TimelinePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edits"
+            element={
+              <ProtectedRoute>
+                <EditsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edits/create"
+            element={
+              <ProtectedRoute>
+                <MemoryReelPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reels"
+            element={
+              <ProtectedRoute>
+                <MemoryReelPage />
               </ProtectedRoute>
             }
           />
