@@ -307,3 +307,76 @@ export const uploadFileToStorage = async (file, userId) => {
     throw error;
   }
 };
+
+// Journal entry functions
+export const saveJournalEntry = async (userId, month, content) => {
+  // First check if an entry exists for this month
+  const { data: existingEntry, error: checkError } = await supabase
+    .from("journal_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("month", month)
+    .single();
+
+  if (checkError && checkError.code !== "PGRST116") {
+    throw checkError;
+  }
+
+  let result;
+  if (existingEntry) {
+    // Update existing entry
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .update({
+        content: content,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existingEntry.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    result = data;
+  } else {
+    // Create new entry
+    const { data, error } = await supabase
+      .from("journal_entries")
+      .insert({
+        user_id: userId,
+        month: month,
+        content: content,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    result = data;
+  }
+
+  return result;
+};
+
+export const getJournalEntry = async (userId, month) => {
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("month", month)
+    .single();
+
+  if (error && error.code !== "PGRST116") throw error; // PGRST116 is "no rows returned"
+  return data;
+};
+
+export const getAllJournalEntries = async (userId) => {
+  const { data, error } = await supabase
+    .from("journal_entries")
+    .select("*")
+    .eq("user_id", userId)
+    .order("month", { ascending: false });
+
+  if (error) throw error;
+  return data;
+};

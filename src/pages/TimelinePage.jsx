@@ -25,8 +25,11 @@ import {
   X,
 } from "lucide-react";
 import { useUser } from "@clerk/clerk-react";
-// @ts-expect-error - Missing type definitions for supabaseHelpers
-import { getUserMedia } from "../lib/supabaseHelpers";
+import {
+  getUserMedia,
+  saveJournalEntry,
+  getJournalEntry,
+} from "../lib/supabaseHelpers";
 import TimelineView from "../components/gallery/TimelineView";
 
 // Journal entry component
@@ -34,59 +37,119 @@ const JournalEntry = ({ date, onSave }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [entry, setEntry] = useState("");
   const [savedEntry, setSavedEntry] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { user } = useUser();
 
-  const handleSave = () => {
-    setSavedEntry(entry);
-    setIsEditing(false);
-    if (onSave) onSave(date, entry);
+  // Format the month for display
+  const formattedMonth = format(new Date(date), "MMMM yyyy");
+
+  // Check if the month is in the future
+  const isFutureMonth = new Date(date) > new Date();
+
+  useEffect(() => {
+    const fetchJournalEntry = async () => {
+      if (!user) return;
+      try {
+        const data = await getJournalEntry(user.id, date);
+        if (data) {
+          setEntry(data.content);
+          setSavedEntry(data.content);
+        } else {
+          // Reset state when switching to a month with no entry
+          setEntry("");
+          setSavedEntry("");
+        }
+      } catch (error) {
+        console.error("Error fetching journal entry:", error);
+      }
+    };
+
+    fetchJournalEntry();
+  }, [user, date]);
+
+  const handleSave = async () => {
+    if (!user || isFutureMonth) return;
+    try {
+      setIsLoading(true);
+      await saveJournalEntry(user.id, date, entry);
+      setSavedEntry(entry);
+      setIsEditing(false);
+      if (onSave) onSave(date, entry);
+    } catch (error) {
+      console.error("Error saving journal entry:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
       <div className="flex items-center justify-between mb-3">
-        <h3 className="font-medium text-gray-900">Journal Entry</h3>
         <div>
-          {isEditing ? (
-            <div className="flex gap-2">
+          <h3 className="font-medium text-gray-900">Journal Entry</h3>
+          <p className="text-sm text-gray-500">{formattedMonth}</p>
+        </div>
+        <div>
+          {!isFutureMonth &&
+            (isEditing ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSave}
+                  disabled={isLoading}
+                  className="p-1 text-primary-600 hover:bg-primary-50 rounded-md disabled:opacity-50"
+                >
+                  {isLoading ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Save size={18} />
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEntry(savedEntry);
+                  }}
+                  disabled={isLoading}
+                  className="p-1 text-gray-600 hover:bg-gray-50 rounded-md disabled:opacity-50"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={handleSave}
-                className="p-1 text-primary-600 hover:bg-primary-50 rounded-md"
-              >
-                <Save size={18} />
-              </button>
-              <button
-                onClick={() => setIsEditing(false)}
+                onClick={() => setIsEditing(true)}
                 className="p-1 text-gray-600 hover:bg-gray-50 rounded-md"
               >
-                <X size={18} />
+                <Edit3 size={18} />
               </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="p-1 text-gray-600 hover:bg-gray-50 rounded-md"
-            >
-              <Edit3 size={18} />
-            </button>
-          )}
+            ))}
         </div>
       </div>
 
-      {isEditing ? (
+      {isFutureMonth ? (
+        <div className="text-center py-6 bg-gray-50 rounded-md">
+          <Calendar className="mx-auto text-gray-400 mb-2" size={24} />
+          <p className="text-sm text-gray-500">
+            Cannot add entries for future months
+          </p>
+        </div>
+      ) : isEditing ? (
         <textarea
           value={entry}
           onChange={(e) => setEntry(e.target.value)}
-          placeholder="Write your thoughts about this day..."
+          placeholder={`Write your thoughts about ${formattedMonth}...`}
           className="w-full border border-gray-300 rounded-md p-3 h-32 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
         />
       ) : savedEntry ? (
         <div className="prose prose-sm max-w-none">
-          <p className="text-gray-700">{savedEntry}</p>
+          <p className="text-gray-700 whitespace-pre-wrap">{savedEntry}</p>
         </div>
       ) : (
         <div className="text-center py-6 bg-gray-50 rounded-md">
           <BookOpen className="mx-auto text-gray-400 mb-2" size={24} />
-          <p className="text-sm text-gray-500">No journal entry yet</p>
+          <p className="text-sm text-gray-500">
+            No journal entry for {formattedMonth}
+          </p>
           <button
             onClick={() => setIsEditing(true)}
             className="mt-2 text-xs text-primary-600 hover:text-primary-700 font-medium"
@@ -209,7 +272,7 @@ export default function TimelinePage() {
     navigate(`/memory/${memoryId}`);
   };
 
-  const handleSaveJournalEntry = (date, entry) => {
+  const handleSaveJournalEntry = async (date, entry) => {
     setJournalEntries((prev) => ({
       ...prev,
       [date]: entry,
