@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toPng } from "html-to-image";
 import { Toaster } from "react-hot-toast";
 import toast from "react-hot-toast";
+import { DndProvider, useDrag, useDrop } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
 
 import {
   Image as ImageIcon,
@@ -19,6 +21,57 @@ import MediaSelector from "./MediaSelector";
 import CollageTemplates from "./CollageTemplates";
 import { uploadToCloudinary } from "../../lib/cloudinary";
 import { useNavigate } from "react-router-dom";
+
+const DraggableImage = ({ image, index, moveImage, removeImage }) => {
+  const ref = useRef(null);
+  const [{ isDragging }, drag] = useDrag({
+    type: "IMAGE",
+    item: { index },
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  });
+
+  const [, drop] = useDrop({
+    accept: "IMAGE",
+    hover: (item, monitor) => {
+      if (!ref.current) return;
+      const dragIndex = item.index;
+      const hoverIndex = index;
+      if (dragIndex === hoverIndex) return;
+
+      moveImage(dragIndex, hoverIndex);
+      item.index = hoverIndex;
+    },
+  });
+
+  drag(drop(ref));
+
+  return (
+    <div
+      ref={ref}
+      className={`relative aspect-square ${isDragging ? "opacity-50" : ""}`}
+    >
+      <div className="w-full h-full rounded-lg overflow-hidden shadow-md">
+        <img
+          src={image.url}
+          alt={`Collage image ${index + 1}`}
+          className="w-full h-full object-cover object-center"
+        />
+        <button
+          type="button"
+          onClick={() => removeImage(index)}
+          className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
+        >
+          <X size={16} />
+        </button>
+        <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+          {index + 1}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function CollageCreator({ onComplete, onCancel, edit = null }) {
   const { user } = useUser();
@@ -51,24 +104,32 @@ export default function CollageCreator({ onComplete, onCancel, edit = null }) {
       try {
         const newImages = await Promise.all(
           files.map(async (file) => {
-            const fileExt = file.name.split(".").pop();
-            const fileName = `${Math.random()}.${fileExt}`;
-            const filePath = `${user.id}/${fileName}`;
+            // Upload to Cloudinary first
+            const uploadResult = await uploadToCloudinary({ file });
 
-            const { error: uploadError } = await supabase.storage
-              .from("collages")
-              .upload(filePath, file);
+            // Save to Supabase media table
+            const { data: mediaData, error: mediaError } = await supabase
+              .from("media")
+              .insert({
+                user_id: user.id,
+                url: uploadResult.secureUrl,
+                public_id: uploadResult.public_id,
+                type: "image",
+                created_at: new Date().toISOString(),
+              })
+              .select()
+              .single();
 
-            if (uploadError) throw uploadError;
-
-            const {
-              data: { publicUrl },
-            } = supabase.storage.from("collages").getPublicUrl(filePath);
+            if (mediaError) {
+              console.error("Error saving to media table:", mediaError);
+              throw mediaError;
+            }
 
             return {
-              url: publicUrl,
-              path: filePath,
+              url: uploadResult.secureUrl,
+              path: uploadResult.public_id,
               name: file.name,
+              media_id: mediaData.id,
             };
           })
         );
@@ -108,6 +169,15 @@ export default function CollageCreator({ onComplete, onCancel, edit = null }) {
     setSelectedImages((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
+  const moveImage = useCallback((dragIndex, hoverIndex) => {
+    setSelectedImages((prevImages) => {
+      const newImages = [...prevImages];
+      const [removed] = newImages.splice(dragIndex, 1);
+      newImages.splice(hoverIndex, 0, removed);
+      return newImages;
+    });
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -135,26 +205,50 @@ export default function CollageCreator({ onComplete, onCancel, edit = null }) {
   const handleCollageImg = async () => {
     if (!collageRef.current) return;
 
-    return await toPng(collageRef.current, {
-      cacheBust: true,
-      useCORS: true,
-      backgroundColor: "#fff",
-      pixelRatio: window.devicePixelRatio || 1,
-      skipFonts: true,
-    });
+    try {
+      return await toPng(collageRef.current, {
+        cacheBust: true,
+        useCORS: true,
+        backgroundColor: "#fff",
+        pixelRatio: 1,
+        skipFonts: true,
+        skipAutoScale: true,
+        quality: 0.8,
+        style: {
+          transform: "none",
+        },
+      });
+    } catch (err) {
+      console.error("Error generating collage:", err);
+      throw err;
+    }
   };
 
   const handleDownload = async () => {
     try {
+      setIsDownloading(true);
+      toast.loading("Preparing download...", { id: "download" });
+
       const dataUrl = await handleCollageImg();
+      if (!dataUrl) throw new Error("Failed to generate collage");
+
       const link = document.createElement("a");
       link.download = `${title || "collage"}.png`;
       link.href = dataUrl;
+
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(dataUrl);
+
       setCloudinaryUrl(dataUrl);
-      toast("Download started!");
+      toast.success("Download started!", { id: "download" });
     } catch (err) {
       console.error("Error downloading collage:", err);
+      toast.error("Failed to download collage. Please try again.", {
+        id: "download",
+      });
       setError("Failed to download collage. Please try again.");
     } finally {
       setIsDownloading(false);
@@ -164,13 +258,15 @@ export default function CollageCreator({ onComplete, onCancel, edit = null }) {
   const handleSaveToEdits = async () => {
     setIsSaving(true);
     try {
+      toast.loading("Generating collage...", { id: "save" });
       const dataUrl = await handleCollageImg();
 
       if (!dataUrl) throw new Error("Could not generate collage image.");
-      // Upload to Cloudinary using the dataUrl directly
+
+      toast.loading("Uploading to cloud...", { id: "save" });
       const uploadResult = await uploadToCloudinary({ file: dataUrl });
 
-      // Save to Supabase
+      toast.loading("Saving to your edits...", { id: "save" });
       const { data: newEdit, error: insertError } = await supabase
         .from("edits")
         .insert({
@@ -185,11 +281,14 @@ export default function CollageCreator({ onComplete, onCancel, edit = null }) {
         .single();
 
       if (insertError) throw insertError;
-      toast.success("Collage saved to your edits!");
+
+      URL.revokeObjectURL(dataUrl);
+
+      toast.success("Collage saved to your edits!", { id: "save" });
       onComplete(newEdit);
     } catch (err) {
       console.error("Error saving collage to edits:", err);
-      toast.error("Failed to save collage. Please try again.");
+      toast.error("Failed to save collage. Please try again.", { id: "save" });
       setError("Failed to save collage. Please try again.");
     } finally {
       setIsSaving(false);
@@ -499,55 +598,50 @@ export default function CollageCreator({ onComplete, onCancel, edit = null }) {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Images (up to 4)
               </label>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                {selectedImages.map((image, index) => (
-                  <div key={index} className="relative aspect-square">
-                    <img
-                      src={image.url}
-                      alt={`Collage image ${index + 1}`}
-                      className="w-full h-full object-cover object-center rounded-lg"
+              <DndProvider backend={HTML5Backend}>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  {selectedImages.map((image, index) => (
+                    <DraggableImage
+                      key={`${image.url}-${index}`}
+                      image={image}
+                      index={index}
+                      moveImage={moveImage}
+                      removeImage={removeImage}
                     />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(index)}
-                      className="absolute top-2 right-2 p-1 bg-black/50 rounded-full text-white hover:bg-black/70"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-                {selectedImages.length < 4 && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-gray-50">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageSelect}
-                        className="hidden"
-                        multiple
-                      />
-                      <div className="text-center">
-                        <ImageIcon className="mx-auto h-8 w-8 text-gray-400" />
-                        <span className="mt-2 block text-sm text-gray-600">
-                          Upload Images
-                        </span>
-                      </div>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setShowMediaSelector(true)}
-                      className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-gray-50"
-                    >
-                      <div className="text-center">
-                        <FolderOpen className="mx-auto h-8 w-8 text-gray-400" />
-                        <span className="mt-2 block text-sm text-gray-600">
-                          Choose from Gallery
-                        </span>
-                      </div>
-                    </button>
-                  </div>
-                )}
-              </div>
+                  ))}
+                  {selectedImages.length < 4 && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-gray-50">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageSelect}
+                          className="hidden"
+                          multiple
+                        />
+                        <div className="text-center">
+                          <ImageIcon className="mx-auto h-8 w-8 text-gray-400" />
+                          <span className="mt-2 block text-sm text-gray-600">
+                            Upload Images
+                          </span>
+                        </div>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowMediaSelector(true)}
+                        className="aspect-square border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-gray-50"
+                      >
+                        <div className="text-center">
+                          <FolderOpen className="mx-auto h-8 w-8 text-gray-400" />
+                          <span className="mt-2 block text-sm text-gray-600">
+                            Choose from Gallery
+                          </span>
+                        </div>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </DndProvider>
             </div>
 
             {error && <div className="text-error-600 text-sm">{error}</div>}

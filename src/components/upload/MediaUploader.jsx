@@ -283,7 +283,7 @@ export default function MediaUploader({
               />
               <button
                 type="submit"
-                className="btn-secondary flex items-center gap-2"
+                className="btn-primary flex items-center gap-2"
                 disabled={isUploading}
               >
                 <Tag size={16} />

@@ -256,7 +256,7 @@ export default function EditDetailPage() {
             <div className="flex items-center gap-4">
               <button
                 onClick={handleDownload}
-                className="btn-secondary flex items-center"
+                className="btn-primary flex items-center"
               >
                 <Download className="w-5 h-5 mr-2" />
                 Download
