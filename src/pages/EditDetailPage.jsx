@@ -70,14 +70,18 @@ export default function EditDetailPage() {
 
   const handleSaveEdit = async () => {
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from("edits")
-        .update({ title: editTitle })
+        .update({
+          title: editTitle,
+          updated_at: now,
+        })
         .eq("id", id);
 
       if (error) throw error;
 
-      setEdit((prev) => ({ ...prev, title: editTitle }));
+      setEdit((prev) => ({ ...prev, title: editTitle, updated_at: now }));
       setIsEditing(false);
       toast.success("Title updated successfully");
     } catch (err) {
@@ -286,8 +290,11 @@ export default function EditDetailPage() {
               Created on {new Date(edit.created_at).toLocaleDateString("en-GB")}
             </p>
             <p>
-              Last updated on{" "}
-              {new Date(edit.updated_at).toLocaleDateString("en-GB")}
+              {edit.updated_at === edit.created_at
+                ? "Not modified since creation"
+                : `Last updated on ${new Date(
+                    edit.updated_at
+                  ).toLocaleDateString("en-GB")}`}
             </p>
           </div>
         </div>
