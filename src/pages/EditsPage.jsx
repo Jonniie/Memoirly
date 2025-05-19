@@ -72,6 +72,10 @@ export default function EditsPage() {
     navigate("/edits");
   };
 
+  const handleEditClick = (edit) => {
+    navigate(`/edits/${edit.id}`);
+  };
+
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -180,7 +184,8 @@ export default function EditsPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
-              className="card card-hover overflow-hidden"
+              className="card card-hover overflow-hidden cursor-pointer"
+              onClick={() => handleEditClick(edit)}
             >
               <div className="aspect-w-16 aspect-h-9 bg-gray-100 relative">
                 {edit.type === "reel" ? (
@@ -202,13 +207,16 @@ export default function EditsPage() {
                 )}
               </div>
               <div className="p-4">
-                <h3 className="font-semibold text-gray-900">{edit.title}</h3>
+                <h3 className="font-semibold text-gray-900 pb-2">
+                  {edit.title}
+                </h3>
                 <img src={edit.url} alt={edit.title} />
                 <p className="text-sm text-gray-600 mt-1">
                   {edit.type === "reel" ? "Video Reel" : "Photo Collage"}
                 </p>
                 <p className="text-xs text-gray-500 mt-2">
-                  Created {new Date(edit.created_at).toLocaleDateString()}
+                  Created{" "}
+                  {new Date(edit.created_at).toLocaleDateString("en-GB")}
                 </p>
               </div>
             </motion.div>

@@ -15,6 +15,7 @@ import MemoryReelPage from "./pages/MemoryReelPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import SharedMemory from "./pages/SharedMemory";
 import EditsPage from "./pages/EditsPage";
+import EditDetailPage from "./pages/EditDetailPage";
 
 // Components
 import Layout from "./components/layout/Layout";
@@ -77,6 +78,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <EditsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/edits/:id"
+            element={
+              <ProtectedRoute>
+                <EditDetailPage />
               </ProtectedRoute>
             }
           />
