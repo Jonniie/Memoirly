@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useUser } from "@clerk/clerk-react";
 import {
@@ -15,6 +15,7 @@ import {
 
 import MediaUploader from "../components/upload/MediaUploader";
 import GalleryGrid from "../components/gallery/GalleryGrid";
+import SearchBar from "../components/search/SearchBar";
 import { cn } from "../lib/utils";
 import { getUserMedia } from "../lib/supabaseHelpers";
 import {
@@ -25,6 +26,7 @@ import {
   modalVariants,
   overlayVariants,
 } from "../lib/animations";
+import ReelCreator from "../components/edits/ReelCreator";
 
 export default function Dashboard() {
   const { user } = useUser();
@@ -34,6 +36,7 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState({
     emotion: "",
     tags: [],
@@ -46,6 +49,7 @@ export default function Dashboard() {
   const filterPanelRef = useRef(null);
   const headerRef = useRef(null);
   const uploadModalRef = useRef(null);
+  const [showReelCreator, setShowReelCreator] = useState(false);
 
   // Get unique emotions and tags from memories
   const uniqueEmotions = [...new Set(memories.map((m) => m.emotion))].filter(
@@ -55,9 +59,21 @@ export default function Dashboard() {
     Boolean
   );
 
-  // Filter memories based on selected filters
+  // Filter memories based on selected filters and search query
   const filteredMemories = useMemo(() => {
     return memories.filter((memory) => {
+      // Search query filter
+      if (searchQuery.trim()) {
+        const searchLower = searchQuery.toLowerCase().trim();
+        const matchesSearch =
+          memory.title?.toLowerCase().includes(searchLower) ||
+          memory.note?.toLowerCase().includes(searchLower) ||
+          memory.tags?.some((tag) => tag.toLowerCase().includes(searchLower)) ||
+          memory.emotion?.toLowerCase().includes(searchLower);
+
+        if (!matchesSearch) return false;
+      }
+
       // Emotion filter
       if (filters.emotion && memory.emotion !== filters.emotion) {
         return false;
@@ -97,7 +113,11 @@ export default function Dashboard() {
 
       return true;
     });
-  }, [memories, filters]);
+  }, [memories, filters, searchQuery]);
+
+  const handleSearch = useCallback((query) => {
+    setSearchQuery(query);
+  }, []);
 
   const handleFilterChange = (filterType, value) => {
     setFilters((prev) => ({
@@ -193,6 +213,11 @@ export default function Dashboard() {
     setIsUploadModalOpen(false);
   };
 
+  const handleReelComplete = (reel) => {
+    setShowReelCreator(false);
+    // Optionally refresh the media list or show a success message
+  };
+
   return (
     <motion.div
       ref={pageRef}
@@ -229,6 +254,13 @@ export default function Dashboard() {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Search Bar */}
+      {memories.length > 0 && (
+        <div className="mb-6">
+          <SearchBar onSearch={handleSearch} />
+        </div>
+      )}
 
       {/* Filters and view toggle */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
@@ -557,6 +589,15 @@ export default function Dashboard() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showReelCreator && (
+          <ReelCreator
+            onComplete={handleReelComplete}
+            onCancel={() => setShowReelCreator(false)}
+          />
         )}
       </AnimatePresence>
     </motion.div>

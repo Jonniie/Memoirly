@@ -2,11 +2,54 @@
 
 ![Summer Memories Logo](public/logo.png)
 
-A modern web application for creating, organizing, and sharing your summer memories through photos and videos, built with React and TypeScript.
+A modern web application for creating, organizing, and sharing your summer memories through photos and videos, built with React and Javascript.
 
 ## 📱 Overview
 
 Summer Memories is a feature-rich web application that helps you preserve and share your summer experiences. With powerful media management, location tagging, and beautiful UI, it's the perfect companion for documenting your adventures.
+
+<em>Built with the tools and technologies:</em>
+
+<img src="https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black" alt="React">
+<img src="https://img.shields.io/badge/JavaScript-3178C6.svg?style=flat&logo=Javascript&logoColor=white" alt="JaveScript">
+<img src="https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white" alt="Vite">
+<img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC.svg?style=flat&logo=Tailwind-CSS&logoColor=white" alt="Tailwind CSS">
+<img src="https://img.shields.io/badge/Supabase-3ECF8E.svg?style=flat&logo=Supabase&logoColor=white" alt="Supabase">
+<img src="https://img.shields.io/badge/Cloudinary-3448C5.svg?style=flat&logo=Cloudinary&logoColor=white" alt="Cloudinary">
+<img src="https://img.shields.io/badge/Clerk-000000.svg?style=flat&logo=Clerk&logoColor=white" alt="Clerk">
+<!-- <img src="https://img.shields.io/badge/Mapbox-000000.svg?style=flat&logo=Mapbox&logoColor=white" alt="Mapbox">
+<img src="https://img.shields.io/badge/FFmpeg-000000.svg?style=flat&logo=FFmpeg&logoColor=white" alt="FFmpeg"> -->
+<img src="https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white" alt="npm">
+
+<!-- Images -->
+<br>
+
+## 🏆 **Challenge Statements Addressed**
+
+**Summer Memories** focuses on providing a seamless and engaging way to capture, organize, and share summer memories through media management and video compilation features. It integrates location-based services to enhance the user experience by allowing for media organization based on location and tagging.
+
+### **Media Management Challenge** 📸 (Primary Focus)
+
+- **Photo and video upload** with drag-and-drop support
+- **Automatic media organization** by date and location
+- **Smart album creation** and management
+- **Batch upload and processing**
+- **Media preview** and quick editing
+
+### **Video Compilation Challenge** 🎥 (Supporting Feature)
+
+- Create beautiful **video reels** from your clips
+- **Custom transitions and effects**
+- **Background music integration**
+- **Video trimming and editing**
+- Export in **multiple formats**
+
+### **Geolocation Challenge** 🌍 (Supporting Feature)
+
+- **Real-time geolocation tagging** to automatically categorize and organize photos
+- **Location-based photo sorting** based on user-provided coordinates
+- **Map integration** for visualizing memories shared in different locations
+- **Location-based media filtering** to create albums or share experiences by region
 
 ## 🎯 Key Features
 
@@ -26,20 +69,13 @@ Summer Memories is a feature-rich web application that helps you preserve and sh
 - Video trimming and editing
 - Export in multiple formats
 
-### 📍 Location Features
-
-- Automatic location tagging
-- Interactive map view of memories
-- Location-based memory grouping
-- Travel route visualization
-- Popular location suggestions
-
 ### 🔐 Security & Privacy
 
 - Secure authentication with Clerk
 - Private and public sharing options
 - End-to-end encryption for sensitive data
 - Granular privacy controls
+- Row Level Security enabled for all user data
 - Secure media storage
 
 ### 💾 Data Management
@@ -54,7 +90,7 @@ Summer Memories is a feature-rich web application that helps you preserve and sh
 
 ### Frontend
 
-- **Framework**: React 18 with TypeScript
+- **Framework**: React + JS
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
 - **State Management**: Zustand
@@ -70,8 +106,8 @@ Summer Memories is a feature-rich web application that helps you preserve and sh
 - **Authentication**: Clerk
 - **Database**: Supabase
 - **Media Storage**: Cloudinary
-- **Video Processing**: ffmpeg.wasm
-- **Maps**: Mapbox
+<!-- - **Video Processing**: ffmpeg.wasm
+- **Maps**: Mapbox -->
 
 ## 🏗️ Architecture
 

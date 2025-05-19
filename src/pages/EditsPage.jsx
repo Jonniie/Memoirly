@@ -1,16 +1,31 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Film, Image as ImageIcon, Plus, Loader2 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import CollageCreator from "../components/edits/CollageCreator";
+import ReelCreator from "../components/edits/ReelCreator";
 
 export default function EditsPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useUser();
   const [edits, setEdits] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isCreatingCollage, setIsCreatingCollage] = useState(false);
+  const [isCreatingReel, setIsCreatingReel] = useState(false);
+
+  useEffect(() => {
+    const type = searchParams.get("type");
+    if (type === "collage") {
+      setIsCreatingCollage(true);
+    }
+    if (type === "reel") {
+      setIsCreatingReel(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetchEdits();
@@ -38,7 +53,23 @@ export default function EditsPage() {
   };
 
   const handleCreateEdit = (type) => {
-    navigate(`/edits/create?type=${type}`);
+    navigate(`/edits?type=${type}`);
+  };
+
+  const handleCollageComplete = async (newCollage) => {
+    setEdits((prev) => [newCollage, ...prev]);
+    setIsCreatingCollage(false);
+    navigate("/edits");
+  };
+
+  const handleCollageCancel = () => {
+    setIsCreatingCollage(false);
+    navigate("/edits");
+  };
+
+  const handleCollageReel = () => {
+    setIsCreatingReel(false);
+    navigate("/edits");
   };
 
   if (isLoading) {
@@ -64,6 +95,25 @@ export default function EditsPage() {
             Try Again
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (isCreatingCollage) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <CollageCreator
+          onComplete={handleCollageComplete}
+          onCancel={handleCollageCancel}
+        />
+      </div>
+    );
+  }
+
+  if (isCreatingReel) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <ReelCreator onCancel={handleCollageReel} />
       </div>
     );
   }
@@ -138,13 +188,22 @@ export default function EditsPage() {
                     <Film size={48} className="text-gray-400" />
                   </div>
                 ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <ImageIcon size={48} className="text-gray-400" />
+                  <div className="grid grid-cols-2 gap-1 h-full">
+                    {edit.images?.slice(0, 4).map((image, i) => (
+                      <div key={i} className="relative">
+                        <img
+                          src={image.url}
+                          alt={`Collage image ${i + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
               <div className="p-4">
                 <h3 className="font-semibold text-gray-900">{edit.title}</h3>
+                <img src={edit.url} alt={edit.title} />
                 <p className="text-sm text-gray-600 mt-1">
                   {edit.type === "reel" ? "Video Reel" : "Photo Collage"}
                 </p>

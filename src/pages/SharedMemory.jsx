@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ArrowLeft, Loader2, X, Maximize2 } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "../lib/supabase";
 
@@ -11,6 +11,7 @@ export default function SharedMemory() {
   const [memory, setMemory] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isFullView, setIsFullView] = useState(false);
 
   useEffect(() => {
     const fetchMemory = async () => {
@@ -22,7 +23,8 @@ export default function SharedMemory() {
           .from("media")
           .select("*")
           .eq("id", id)
-          .eq("is_public", true);
+          .eq("is_public", true)
+          .single();
 
         if (error) throw error;
 
@@ -33,7 +35,7 @@ export default function SharedMemory() {
             url: data.url,
             thumbnailUrl: data.url,
             type: data.type,
-            title: data.caption || data.url.split("/").pop(),
+            title: data.caption || (data.url && data.url.split("/").pop()),
             note: data.note || "",
             createdAt: data.created_at,
             tags: data.tags || [],
@@ -46,8 +48,7 @@ export default function SharedMemory() {
           setError("This memory is not available for public viewing.");
         }
       } catch (err) {
-        console.error("Error fetching memory:", err);
-        // setError("Failed to load memory details. Please try again later.");
+        // console.error("Error fetching memory:", err);
         setError("This memory is not available for public viewing.");
       } finally {
         setIsLoading(false);
@@ -108,7 +109,8 @@ export default function SharedMemory() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="relative"
+              className="relative cursor-pointer"
+              onClick={() => setIsFullView(true)}
             >
               {memory.type === "image" ? (
                 <img
@@ -176,6 +178,48 @@ export default function SharedMemory() {
           </div>
         </div>
       </div>
+
+      {/* Full View Modal */}
+      <AnimatePresence>
+        {isFullView && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+            onClick={() => setIsFullView(false)}
+          >
+            <button
+              onClick={() => setIsFullView(false)}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 transition-colors"
+            >
+              <X size={24} />
+            </button>
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
+              className="relative max-w-7xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {memory.type === "image" ? (
+                <img
+                  src={memory.url}
+                  alt={memory.title}
+                  className="w-full h-auto max-h-[90vh] object-contain"
+                />
+              ) : (
+                <video
+                  src={memory.url}
+                  controls
+                  className="w-full h-auto max-h-[90vh] object-contain"
+                  autoPlay
+                />
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
