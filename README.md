@@ -89,6 +89,8 @@ Our Supabase database is designed to efficiently store and manage user data, med
 
 ![Supabase Schema](public/supabase%20schema.png)
 
+
+
 ### Key Tables
 
 - **users**: Stores user profiles and authentication data
@@ -209,10 +211,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Cloudinary for media management
 - The open-source community for various tools and libraries
 
-## 📞 Contact
 
-Project Link: [repository-url]
 
-## 📚 Documentation
 
-For detailed documentation, please visit our [documentation site](docs/).
