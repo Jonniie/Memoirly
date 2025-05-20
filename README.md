@@ -2,8 +2,6 @@
 
 ![Memoirly Logo](public/logo.png)
 
-A modern web application for creating, organizing, and sharing your memories through photos and videos, built with React and JavaScript.
-
 ## 📱 Overview
 
 Memoirly is a feature-rich web application that helps you preserve and share your experiences. With powerful media management, timeline organization, and beautiful UI, it's the perfect companion for documenting your life's moments.
