@@ -80,9 +80,10 @@ export default function Dashboard() {
       }
 
       // Tags filter
-      if (filters.tags.length > 0) {
+      if (Array.isArray(filters.tags) && filters.tags.length > 0) {
+        const memoryTags = Array.isArray(memory.tags) ? memory.tags : [];
         const hasMatchingTag = filters.tags.some((tag) =>
-          memory.tags.includes(tag)
+          memoryTags.includes(tag)
         );
         if (!hasMatchingTag) return false;
       }
@@ -120,10 +121,35 @@ export default function Dashboard() {
   }, []);
 
   const handleFilterChange = (filterType, value) => {
-    setFilters((prev) => ({
-      ...prev,
-      [filterType]: value,
-    }));
+    setFilters((prev) => {
+      if (filterType === "tags") {
+        // For tags, toggle the selected tag
+        const currentTags = Array.isArray(prev.tags) ? prev.tags : [];
+        const newTags = currentTags.includes(value)
+          ? currentTags.filter((tag) => tag !== value)
+          : [...currentTags, value];
+
+        return {
+          ...prev,
+          tags: newTags,
+        };
+      } else if (filterType === "dateRange") {
+        // For date range, merge with existing range
+        return {
+          ...prev,
+          dateRange: {
+            ...prev.dateRange,
+            ...value,
+          },
+        };
+      } else {
+        // For all other filters, just set the value
+        return {
+          ...prev,
+          [filterType]: value,
+        };
+      }
+    });
   };
 
   const clearFilters = () => {

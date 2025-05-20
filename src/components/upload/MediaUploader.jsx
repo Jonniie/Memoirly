@@ -140,8 +140,6 @@ export default function MediaUploader({
           tags: tags,
         });
 
-        console.log("mediaData", mediaData);
-
         if (mediaData.isDuplicate) {
           duplicateFiles.push(file.name);
           continue; // Skip adding to uploadedMedia array

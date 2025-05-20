@@ -259,7 +259,6 @@ export default function AlbumPage() {
 
         // If media already exists, return it
         if (existingMedia) {
-          console.log("Media already exists, returning existing record");
           return existingMedia;
         }
 

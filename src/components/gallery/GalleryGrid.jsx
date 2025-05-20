@@ -35,13 +35,27 @@ export default function GalleryGrid({
   useEffect(() => {
     const fetchFavorites = async () => {
       try {
+        // Filter out any memories without valid IDs
+        const validMemoryIds = memories
+          .filter((memory) => memory && (memory.id || memory.publicId))
+          .map((memory) => memory.id || memory.publicId);
+
+        if (validMemoryIds.length === 0) {
+          setFavorites({});
+          return;
+        }
+
+        // Only fetch favorites for memories that have been saved to Supabase
+        const supabaseIds = validMemoryIds.filter((id) => id.length === 36); // UUID length
+        if (supabaseIds.length === 0) {
+          setFavorites({});
+          return;
+        }
+
         const { data, error } = await supabase
           .from("media")
           .select("id, favourite")
-          .in(
-            "id",
-            memories.map((memory) => memory.id)
-          );
+          .in("id", supabaseIds);
 
         if (error) throw error;
 
@@ -54,6 +68,7 @@ export default function GalleryGrid({
         setFavorites(favoritesMap);
       } catch (err) {
         console.error("Error fetching favorites:", err);
+        setFavorites({});
       }
     };
 
@@ -122,136 +137,154 @@ export default function GalleryGrid({
     }
   };
 
-  const renderMemoryCard = (memory) => (
-    <motion.div
-      key={memory.id}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className={cn("mb-4", viewMode === "list" && "w-full")}
-    >
-      <div
-        onClick={() => handleMemoryClick(memory.id)}
-        className={cn(
-          "block group relative overflow-hidden rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer",
-          viewMode === "list" && "flex"
-        )}
+  const renderMemoryCard = (memory) => {
+    // Use publicId as a fallback if id is not available
+    const memoryId = memory.id || memory.publicId;
+
+    if (!memoryId) {
+      console.warn("Memory missing both ID and publicId:", memory);
+      return null;
+    }
+
+    return (
+      <motion.div
+        key={memoryId}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className={cn("mb-4", viewMode === "list" && "w-full")}
       >
-        {/* Memory Image/Video */}
         <div
+          onClick={() => handleMemoryClick(memoryId)}
           className={cn(
-            "bg-gray-100 relative",
-            viewMode === "list" && "w-48 flex-shrink-0 h-[150px] object"
+            "block group relative overflow-hidden rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer",
+            viewMode === "list" && "flex"
           )}
+          data-memory-id={memoryId}
         >
-          {memory.type === "image" ? (
-            <img
-              src={memory.thumbnailUrl}
-              alt={memory.title}
-              className={cn(
-                "object-cover w-full h-full group-hover:scale-105 transition-transform duration-300",
-                viewMode === "list" && "object-top"
-              )}
-            />
-          ) : (
-            <video
-              src={memory.url}
-              className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
-            />
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div className="absolute top-2 right-2 flex gap-2 z-50">
-          {/* Favorite Button */}
-          <button
-            onClick={(e) => handleToggleFavorite(e, memory)}
-            disabled={favoritingId === memory.id}
-            className={cn(
-              "p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors",
-              favorites[memory.id]
-                ? "text-primary-600"
-                : "text-gray-600 hover:text-primary-600"
-            )}
-          >
-            {favoritingId === memory.id ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <Heart
-                size={18}
-                className={cn(favorites[memory.id] && "fill-current")}
-              />
-            )}
-          </button>
-
-          {/* Remove Button - Only show if onRemoveMedia is provided */}
-          {onRemoveMedia && (
-            <button
-              onClick={(e) => handleRemoveMedia(e, memory)}
-              disabled={removingId === memory.id}
-              className="p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors text-gray-600 hover:text-red-600"
-            >
-              {removingId === memory.id ? (
-                <Loader2 size={18} className="animate-spin" />
-              ) : (
-                <Trash2 size={18} />
-              )}
-            </button>
-          )}
-        </div>
-
-        {/* Memory Info */}
-        <div
-          className={cn(
-            "absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity",
-            viewMode === "list" && "relative opacity-100 bg-none"
-          )}
-        >
+          {/* Memory Image/Video */}
           <div
             className={cn(
-              "absolute bottom-0 left-0 right-0 p-4 text-white",
-              viewMode === "list" && "relative text-gray-900"
+              "bg-gray-100 relative",
+              viewMode === "list" && "w-48 flex-shrink-0 h-[150px] object"
             )}
           >
-            <h3 className="text-lg font-semibold mb-1">{memory.title}</h3>
+            {memory.type === "image" ? (
+              <img
+                src={memory.thumbnailUrl}
+                alt={memory.title}
+                className={cn(
+                  "object-cover w-full h-full group-hover:scale-105 transition-transform duration-300",
+                  viewMode === "list" && "object-top"
+                )}
+                data-memory-id={memoryId}
+              />
+            ) : (
+              <video
+                src={memory.url}
+                className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-300"
+                data-memory-id={memoryId}
+              />
+            )}
+          </div>
 
-            <div className="flex items-center text-sm text-white/80 space-x-4">
-              <div className="flex items-center">
-                <Calendar size={14} className="mr-1" />
-                <span>{format(new Date(memory.createdAt), "MMM d, yyyy")}</span>
+          {/* Action Buttons */}
+          <div className="absolute top-2 right-2 flex gap-2 z-50">
+            {/* Favorite Button */}
+            <button
+              onClick={(e) => handleToggleFavorite(e, memory)}
+              disabled={favoritingId === memoryId}
+              className={cn(
+                "p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors",
+                favorites[memoryId]
+                  ? "text-primary-600"
+                  : "text-gray-600 hover:text-primary-600"
+              )}
+              data-memory-id={memoryId}
+            >
+              {favoritingId === memoryId ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Heart
+                  size={18}
+                  className={cn(favorites[memoryId] && "fill-current")}
+                />
+              )}
+            </button>
+
+            {/* Remove Button - Only show if onRemoveMedia is provided */}
+            {onRemoveMedia && (
+              <button
+                onClick={(e) => handleRemoveMedia(e, memory)}
+                disabled={removingId === memoryId}
+                className="p-2 rounded-full bg-white/80 backdrop-blur-sm transition-colors text-gray-600 hover:text-red-600"
+                data-memory-id={memoryId}
+              >
+                {removingId === memoryId ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Trash2 size={18} />
+                )}
+              </button>
+            )}
+          </div>
+
+          {/* Memory Info */}
+          <div
+            className={cn(
+              "absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity",
+              viewMode === "list" && "relative opacity-100 bg-none"
+            )}
+            data-memory-id={memoryId}
+          >
+            <div
+              className={cn(
+                "absolute bottom-0 left-0 right-0 p-4 text-white",
+                viewMode === "list" && "relative text-gray-900"
+              )}
+            >
+              <h3 className="text-lg font-semibold mb-1">{memory.title}</h3>
+
+              <div className="flex items-center text-sm text-white/80 space-x-4">
+                <div className="flex items-center">
+                  <Calendar size={14} className="mr-1" />
+                  <span>
+                    {format(new Date(memory.createdAt), "MMM d, yyyy")}
+                  </span>
+                </div>
+
+                {memory.location && (
+                  <div className="flex items-center">
+                    <MapPin size={14} className="mr-1" />
+                    <span>{memory.location}</span>
+                  </div>
+                )}
               </div>
 
-              {memory.location && (
-                <div className="flex items-center">
-                  <MapPin size={14} className="mr-1" />
-                  <span>{memory.location}</span>
+              {memory.tags && memory.tags.length > 0 && (
+                <div className="flex items-center mt-2 flex-wrap gap-1">
+                  <Tag size={14} className="mr-1" />
+                  {memory.tags.map((tag) => (
+                    <span
+                      key={`${memoryId}-${tag}`}
+                      className={cn(
+                        "text-xs px-2 py-0.5 rounded-full",
+                        viewMode === "list"
+                          ? "bg-gray-100 text-gray-700"
+                          : "bg-white/20"
+                      )}
+                    >
+                      {tag}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
-
-            {memory.tags && memory.tags.length > 0 && (
-              <div className="flex items-center mt-2 flex-wrap gap-1">
-                <Tag size={14} className="mr-1" />
-                {memory.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className={cn(
-                      "text-xs px-2 py-0.5 rounded-full",
-                      viewMode === "list"
-                        ? "bg-gray-100 text-gray-700"
-                        : "bg-white/20"
-                    )}
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
         </div>
-      </div>
-    </motion.div>
-  );
+      </motion.div>
+    );
+  };
 
   if (viewMode === "list") {
     return (

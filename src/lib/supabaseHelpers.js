@@ -91,7 +91,8 @@ export const saveMediaToSupabase = async (mediaData) => {
     .from("media")
     .select("*")
     .eq("url", mediaData.url)
-    .eq("user_id", mediaData.user_id);
+    .eq("user_id", mediaData.user_id)
+    .single();
 
   if (checkError && checkError.code !== "PGRST116") {
     // PGRST116 is "no rows returned" error
@@ -101,7 +102,6 @@ export const saveMediaToSupabase = async (mediaData) => {
 
   // If media already exists, return it with a duplicate flag
   if (existingMedia) {
-    console.log("Media already exists, returning existing record");
     return { ...existingMedia, isDuplicate: true };
   }
 
