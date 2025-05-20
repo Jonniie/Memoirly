@@ -10,15 +10,7 @@ Memoirly is a feature-rich web application that helps you preserve and share you
 
 <em>Built with the tools and technologies:</em>
 
-<img src="https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black" alt="React">
-<img src="https://img.shields.io/badge/JavaScript-3178C6.svg?style=flat&logo=Javascript&logoColor=white" alt="JavaScript">
-<img src="https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white" alt="Vite">
-<img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC.svg?style=flat&logo=Tailwind-CSS&logoColor=white" alt="Tailwind CSS">
-<img src="https://img.shields.io/badge/Supabase-3ECF8E.svg?style=flat&logo=Supabase&logoColor=white" alt="Supabase">
-<img src="https://img.shields.io/badge/Cloudinary-3448C5.svg?style=flat&logo=Cloudinary&logoColor=white" alt="Cloudinary">
-<img src="https://img.shields.io/badge/Clerk-000000.svg?style=flat&logo=Clerk&logoColor=white" alt="Clerk">
-<img src="https://img.shields.io/badge/TensorFlow-FF6F00.svg?style=flat&logo=TensorFlow&logoColor=white" alt="TensorFlow">
-<img src="https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white" alt="npm">
+<img src="https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black" alt="React"> <img src="https://img.shields.io/badge/JavaScript-3178C6.svg?style=flat&logo=Javascript&logoColor=white" alt="JavaScript"> <img src="https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white" alt="Vite"> <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC.svg?style=flat&logo=Tailwind-CSS&logoColor=white" alt="Tailwind CSS"> <img src="https://img.shields.io/badge/Supabase-3ECF8E.svg?style=flat&logo=Supabase&logoColor=white" alt="Supabase"> <img src="https://img.shields.io/badge/Cloudinary-3448C5.svg?style=flat&logo=Cloudinary&logoColor=white" alt="Cloudinary"> <img src="https://img.shields.io/badge/Clerk-000000.svg?style=flat&logo=Clerk&logoColor=white" alt="Clerk"> <img src="https://img.shields.io/badge/TensorFlow-FF6F00.svg?style=flat&logo=TensorFlow&logoColor=white" alt="TensorFlow"> <img src="https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white" alt="npm">
 
 ## 🎯 Key Features
 
@@ -144,8 +136,8 @@ src/
 1. Clone the repository:
 
    ```bash
-   git clone [repository-url]
-   cd memoirly
+   git clone https://github.com/Jonniie/Memoirly.git
+   cd Memoirly
    ```
 
 2. Install dependencies:
@@ -160,10 +152,31 @@ src/
    VITE_SUPABASE_URL=your_supabase_url
    VITE_SUPABASE_ANON_KEY=your_supabase_key
    VITE_CLOUDINARY_CLOUD_NAME=your_cloudinary_name
+   VITE_CLOUDINARY_UPLOAD=your_cloudinary_preset_value
    VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
    ```
 
-4. Start the development server:
+#### Supabase Credentials
+
+1. Go to [Supabase](https://supabase.com) and create a new project
+2. Once your project is created, go to Project Settings > API
+3. Copy the "Project URL" for `VITE_SUPABASE_URL`
+4. Copy the "anon public" key for `VITE_SUPABASE_ANON_KEY`
+
+#### Cloudinary Credentials
+
+1. Sign up for a [Cloudinary](https://cloudinary.com) account
+2. Go to your Dashboard
+3. Copy your "Cloud name" for `VITE_CLOUDINARY_CLOUD_NAME` and Cloud Preset Value for `VITE_CLOUDINARY_UPLOAD`
+
+#### Clerk Authentication
+
+1. Create an account at [Clerk](https://clerk.com)
+2. Create a new application
+3. Go to API Keys in your dashboard
+4. Copy the "Publishable Key" for `VITE_CLERK_PUBLISHABLE_KEY`
+
+5. Start the development server:
    ```bash
    npm run dev
    ```
@@ -173,7 +186,6 @@ src/
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
 
 ## 🧪 Features in Development
 
@@ -185,14 +197,6 @@ src/
 - Advanced analytics
 - Custom themes and templates
 - Collaborative albums
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ## 📄 License
 
