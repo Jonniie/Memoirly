@@ -577,7 +577,7 @@ export default function MemoryDetail() {
       className="min-h-screen"
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-6 flex items-center justify-between flex-wrap gap-2">
           <button
             onClick={handleGoBack}
             className="btn-outline flex items-center"
@@ -585,7 +585,7 @@ export default function MemoryDetail() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => setShowAITagger(true)}
               className="btn-primary flex items-center"

@@ -215,7 +215,7 @@ export default function EditDetailPage() {
         className="bg-white rounded-lg shadow-xl overflow-hidden"
       >
         <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
             {isEditing ? (
               <div className="flex items-center gap-2 flex-1">
                 <input

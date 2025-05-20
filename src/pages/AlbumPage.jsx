@@ -461,7 +461,7 @@ export default function AlbumPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center">
           <Folder size={24} className="mr-2 text-primary-600" />
           {currentAlbum ? currentAlbum.title : "Albums"}
@@ -502,7 +502,7 @@ export default function AlbumPage() {
                 </button>
 
                 {showAlbumMenu && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-[999]">
                     <button
                       onClick={() => {
                         setSelectedAlbum(currentAlbum);

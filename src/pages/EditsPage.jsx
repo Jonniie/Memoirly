@@ -124,7 +124,7 @@ export default function EditsPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-8 flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-gray-900 flex items-center">
           <Film size={24} className="mr-2 text-primary-600" />
           My Edits
