@@ -10,9 +10,7 @@ Memoirly is a feature-rich web application that helps you preserve and share you
 
 <img src="https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black" alt="React"> <img src="https://img.shields.io/badge/JavaScript-3178C6.svg?style=flat&logo=Javascript&logoColor=white" alt="JavaScript"> <img src="https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white" alt="Vite"> <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC.svg?style=flat&logo=Tailwind-CSS&logoColor=white" alt="Tailwind CSS"> <img src="https://img.shields.io/badge/Supabase-3ECF8E.svg?style=flat&logo=Supabase&logoColor=white" alt="Supabase"> <img src="https://img.shields.io/badge/Cloudinary-3448C5.svg?style=flat&logo=Cloudinary&logoColor=white" alt="Cloudinary"> <img src="https://img.shields.io/badge/Clerk-000000.svg?style=flat&logo=Clerk&logoColor=white" alt="Clerk"> <img src="https://img.shields.io/badge/TensorFlow-FF6F00.svg?style=flat&logo=TensorFlow&logoColor=white" alt="TensorFlow"> <img src="https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white" alt="npm">
 
-![image](https://github.com/user-attachments/assets/38b9bfe3-0581-4b6a-acfb-e5b6061ce131)  ![image](https://github.com/user-attachments/assets/a1ba7acb-dc41-49a5-b011-c4424cb05021) ![image](https://github.com/user-attachments/assets/bd02117b-b45b-4a11-831c-5785c1f0abe9) ![image](https://github.com/user-attachments/assets/2ff77ac0-7bb1-4ebc-b840-f6de2bc6a2af) ![image](https://github.com/user-attachments/assets/d1b79370-a9b5-4aab-9be5-fe626b062aa8) ![image](https://github.com/user-attachments/assets/5fa5b71b-0835-4127-b5f6-ce99b0bed27b) ![image](https://github.com/user-attachments/assets/82410540-722a-4763-90f2-a4cf7dc10532)
-
-
+![image](https://github.com/user-attachments/assets/38b9bfe3-0581-4b6a-acfb-e5b6061ce131) ![image](https://github.com/user-attachments/assets/a1ba7acb-dc41-49a5-b011-c4424cb05021) ![image](https://github.com/user-attachments/assets/bd02117b-b45b-4a11-831c-5785c1f0abe9) ![image](https://github.com/user-attachments/assets/2ff77ac0-7bb1-4ebc-b840-f6de2bc6a2af) ![image](https://github.com/user-attachments/assets/d1b79370-a9b5-4aab-9be5-fe626b062aa8) ![image](https://github.com/user-attachments/assets/5fa5b71b-0835-4127-b5f6-ce99b0bed27b) ![image](https://github.com/user-attachments/assets/82410540-722a-4763-90f2-a4cf7dc10532)
 
 ## 🎯 Key Features
 
@@ -91,38 +89,37 @@ Our Supabase database is designed to efficiently store and manage user data, med
 
 ![Supabase Schema](public/supabase%20schema.png)
 
-
-
 ### Key Tables
 
-- **users**: Stores user profiles and authentication data
-- **memories**: Contains all uploaded media and associated metadata
-- **albums**: Manages collections of memories
-- **shares**: Manages sharing permissions and public access
+- **media**: Stores all uploaded media (photos, videos) and associated metadata (caption, emotion, tags, location, etc.).
+- **albums**: Manages collections of media, including title, description, and cover image.
+- **album_media**: Join table linking media to albums, with a timestamp for when media was added to an album.
+- **edits**: Stores information about edits made to media, including type, title, URL, and timestamps.
+- **journal_entries**: Contains user journal entries, organized by month, with content and timestamps.
 
 ## 🏗️ Project Structure
 
 ```
 src/
-├── api/           # API integration
-├── components/    # Reusable UI components
-│   ├── auth/     # Authentication components
-│   ├── edits/    # Video editing components
-│   ├── gallery/  # Media gallery components
-│   ├── layout/   # Layout components
-│   ├── search/   # Search functionality
-│   └── upload/   # File upload components
-├── pages/        # Page components
-│   ├── HomePage
-│   ├── Dashboard
-│   ├── MemoryDetail
-│   ├── AlbumPage
-│   ├── TimelinePage
-│   ├── MemoryReelPage
-│   └── more...
-├── lib/          # Utility functions and hooks
-├── App.jsx       # Main application component
-└── main.jsx      # Application entry point
+├── api/             # API integration (Supabase, Cloudinary, Clerk, etc.)
+├── components/      # Reusable UI components
+│   ├── auth/        # Authentication (login, signup, etc.)
+│   ├── edits/       # Video and media editing components
+│   ├── gallery/     # Media gallery and display components
+│   ├── layout/      # Layout and navigation components
+│   ├── search/      # Search and filtering components
+│   └── upload/      # File/media upload components
+├── pages/           # Application pages
+│   ├── HomePage/        # Landing page
+│   ├── Dashboard/       # User dashboard
+│   ├── MemoryDetail/    # Single memory/media detail
+│   ├── AlbumPage/       # Album view and management
+│   ├── TimelinePage/    # Timeline of memories
+│   ├── MemoryReelPage/  # Video reel creation
+│   └── ...              # Other pages
+├── lib/             # Utility functions, hooks, and helpers
+├── App.jsx          # Main application component
+└── main.jsx         # Application entry point
 ```
 
 ## 🚀 Getting Started
@@ -220,7 +217,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Supabase for database services
 - Cloudinary for media management
 - The open-source community for various tools and libraries
-
-
-
-
