@@ -176,6 +176,14 @@ src/
 3. Go to API Keys in your dashboard
 4. Copy the "Publishable Key" for `VITE_CLERK_PUBLISHABLE_KEY`
 
+#### Test Authentication Credentials
+
+| Email    | test@gmail.com     |
+| -------- | ------------------ |
+| Password | -test123@gmail.com |
+
+> 💡 Use these credentials to test the app on the go
+
 5. Start the development server:
    ```bash
    npm run dev
