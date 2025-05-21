@@ -2,8 +2,6 @@
 
 ![Memoirly Logo](public/logo.png)
 
-A modern web application for creating, organizing, and sharing your memories through photos and videos, built with React and JavaScript.
-
 ## 📱 Overview
 
 Memoirly is a feature-rich web application that helps you preserve and share your experiences. With powerful media management, timeline organization, and beautiful UI, it's the perfect companion for documenting your life's moments.
@@ -11,6 +9,10 @@ Memoirly is a feature-rich web application that helps you preserve and share you
 <em>Built with the tools and technologies:</em>
 
 <img src="https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black" alt="React"> <img src="https://img.shields.io/badge/JavaScript-3178C6.svg?style=flat&logo=Javascript&logoColor=white" alt="JavaScript"> <img src="https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white" alt="Vite"> <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC.svg?style=flat&logo=Tailwind-CSS&logoColor=white" alt="Tailwind CSS"> <img src="https://img.shields.io/badge/Supabase-3ECF8E.svg?style=flat&logo=Supabase&logoColor=white" alt="Supabase"> <img src="https://img.shields.io/badge/Cloudinary-3448C5.svg?style=flat&logo=Cloudinary&logoColor=white" alt="Cloudinary"> <img src="https://img.shields.io/badge/Clerk-000000.svg?style=flat&logo=Clerk&logoColor=white" alt="Clerk"> <img src="https://img.shields.io/badge/TensorFlow-FF6F00.svg?style=flat&logo=TensorFlow&logoColor=white" alt="TensorFlow"> <img src="https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white" alt="npm">
+
+![image](https://github.com/user-attachments/assets/38b9bfe3-0581-4b6a-acfb-e5b6061ce131)  ![image](https://github.com/user-attachments/assets/a1ba7acb-dc41-49a5-b011-c4424cb05021) ![image](https://github.com/user-attachments/assets/bd02117b-b45b-4a11-831c-5785c1f0abe9) ![image](https://github.com/user-attachments/assets/2ff77ac0-7bb1-4ebc-b840-f6de2bc6a2af) ![image](https://github.com/user-attachments/assets/d1b79370-a9b5-4aab-9be5-fe626b062aa8) ![image](https://github.com/user-attachments/assets/5fa5b71b-0835-4127-b5f6-ce99b0bed27b) ![image](https://github.com/user-attachments/assets/82410540-722a-4763-90f2-a4cf7dc10532)
+
+
 
 ## 🎯 Key Features
 
@@ -88,6 +90,8 @@ Memoirly is a feature-rich web application that helps you preserve and share you
 Our Supabase database is designed to efficiently store and manage user data, media, and relationships. Here's a visual representation of our database schema:
 
 ![Supabase Schema](public/supabase%20schema.png)
+
+
 
 ### Key Tables
 
@@ -217,10 +221,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Cloudinary for media management
 - The open-source community for various tools and libraries
 
-## 📞 Contact
 
-Project Link: [repository-url]
 
-## 📚 Documentation
 
-For detailed documentation, please visit our [documentation site](docs/).
