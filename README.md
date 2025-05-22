@@ -10,6 +10,14 @@ Memoirly is a feature-rich web application that helps you preserve and share you
 
 <img src="https://img.shields.io/badge/React-61DAFB.svg?style=flat&logo=React&logoColor=black" alt="React"> <img src="https://img.shields.io/badge/JavaScript-3178C6.svg?style=flat&logo=Javascript&logoColor=white" alt="JavaScript"> <img src="https://img.shields.io/badge/Vite-646CFF.svg?style=flat&logo=Vite&logoColor=white" alt="Vite"> <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC.svg?style=flat&logo=Tailwind-CSS&logoColor=white" alt="Tailwind CSS"> <img src="https://img.shields.io/badge/Supabase-3ECF8E.svg?style=flat&logo=Supabase&logoColor=white" alt="Supabase"> <img src="https://img.shields.io/badge/Cloudinary-3448C5.svg?style=flat&logo=Cloudinary&logoColor=white" alt="Cloudinary"> <img src="https://img.shields.io/badge/Clerk-000000.svg?style=flat&logo=Clerk&logoColor=white" alt="Clerk"> <img src="https://img.shields.io/badge/TensorFlow-FF6F00.svg?style=flat&logo=TensorFlow&logoColor=white" alt="TensorFlow"> <img src="https://img.shields.io/badge/npm-CB3837.svg?style=flat&logo=npm&logoColor=white" alt="npm">
 
+## 🎬 Demo
+
+<div align="center">
+  <video src="public/Demo_video.webm" controls width="600" poster="public/logo.png">
+    Your browser does not support the video tag.
+  </video>
+</div>
+
 ![image](https://github.com/user-attachments/assets/38b9bfe3-0581-4b6a-acfb-e5b6061ce131) ![image](https://github.com/user-attachments/assets/a1ba7acb-dc41-49a5-b011-c4424cb05021) ![image](https://github.com/user-attachments/assets/bd02117b-b45b-4a11-831c-5785c1f0abe9) ![image](https://github.com/user-attachments/assets/2ff77ac0-7bb1-4ebc-b840-f6de2bc6a2af) ![image](https://github.com/user-attachments/assets/d1b79370-a9b5-4aab-9be5-fe626b062aa8) ![image](https://github.com/user-attachments/assets/5fa5b71b-0835-4127-b5f6-ce99b0bed27b) ![image](https://github.com/user-attachments/assets/82410540-722a-4763-90f2-a4cf7dc10532)
 
 ## 🎯 Key Features
