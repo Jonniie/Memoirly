@@ -14,7 +14,8 @@ export const createAlbum = async (userId, title, description = null) => {
         created_at: new Date().toISOString(),
       },
     ])
-    .select();
+    .select()
+    .single();
   if (error) throw error;
   return data;
 };
