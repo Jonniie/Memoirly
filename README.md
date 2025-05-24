@@ -13,12 +13,12 @@ Memoirly is a feature-rich web application that helps you preserve and share you
 ## 🎬 Demo
 [Demo_video.webm](https://github.com/user-attachments/assets/b77a59f8-199e-4400-83d2-a4e15b8185b2)
 
-
+## 📸 Screenshots
 ![image](https://github.com/user-attachments/assets/38b9bfe3-0581-4b6a-acfb-e5b6061ce131) ![image](https://github.com/user-attachments/assets/a1ba7acb-dc41-49a5-b011-c4424cb05021) ![image](https://github.com/user-attachments/assets/bd02117b-b45b-4a11-831c-5785c1f0abe9) ![image](https://github.com/user-attachments/assets/2ff77ac0-7bb1-4ebc-b840-f6de2bc6a2af) ![image](https://github.com/user-attachments/assets/d1b79370-a9b5-4aab-9be5-fe626b062aa8) ![image](https://github.com/user-attachments/assets/5fa5b71b-0835-4127-b5f6-ce99b0bed27b) ![image](https://github.com/user-attachments/assets/82410540-722a-4763-90f2-a4cf7dc10532)
 
 ## 🎯 Key Features
 
-### 📸 Media Management
+### 📷 Media Management
 
 - Photo and video upload with drag-and-drop support
 - Automatic media organization by date
